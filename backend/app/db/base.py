@@ -1,3 +1,7 @@
 from app.db.base_class import Base
 from app.models.user import User
 from app.models.role import Role
+from app.models.course import Course
+from app.models.student import Student
+from app.models.transaction import Transaction
+from app.models.employee import Employee

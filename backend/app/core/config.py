@@ -27,19 +27,26 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "password"
     POSTGRES_DB: str = "erp_db"
     POSTGRES_PORT: str = "5432"
-    DATABASE_URI: Union[PostgresDsn, None] = None
+    DATABASE_URI: Union[Any, None] = None
 
     @validator("DATABASE_URI", pre=True)
     def assemble_db_connection(cls, v: Union[str, None], values: dict) -> Any:
         if isinstance(v, str):
             return v
+        
+        # Default to SQLite for local development if Postgres info is not fully provided or fails
+        postgres_server = values.get("POSTGRES_SERVER")
+        if not postgres_server or postgres_server == "localhost":
+             # You can change this to use SQLite by default or stick to assembling postgres
+             pass
+
         return PostgresDsn.build(
             scheme="postgresql+asyncpg",
             username=values.get("POSTGRES_USER"),
             password=values.get("POSTGRES_PASSWORD"),
             host=values.get("POSTGRES_SERVER"),
-            port=values.get("POSTGRES_PORT"),
-            path=f"/{values.get('POSTGRES_DB') or ''}",
+            port=int(values.get("POSTGRES_PORT") or 5432),
+            path=f"{values.get('POSTGRES_DB') or ''}",
         )
 
     class Config:
