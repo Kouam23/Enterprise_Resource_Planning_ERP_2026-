@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
 export const LoginPage: React.FC = () => {
@@ -7,6 +8,7 @@ export const LoginPage: React.FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const { login } = useAuth();
+    const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -17,6 +19,7 @@ export const LoginPage: React.FC = () => {
 
             const response = await axios.post('http://localhost:8000/api/v1/auth/login', formData);
             login(response.data.access_token);
+            navigate('/dashboard');
         } catch (err) {
             setError('Invalid credentials');
             console.error(err);
@@ -56,6 +59,14 @@ export const LoginPage: React.FC = () => {
                         Sign In
                     </button>
                 </form>
+                <div className="mt-6 text-center">
+                    <p className="text-gray-600 text-sm">
+                        Don't have an account?{' '}
+                        <Link to="/register" className="text-blue-600 hover:underline font-medium">
+                            Register here
+                        </Link>
+                    </p>
+                </div>
             </div>
         </div>
     );

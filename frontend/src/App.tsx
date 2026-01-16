@@ -15,7 +15,8 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/" element={
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/dashboard" element={
             <ProtectedRoute>
               <DashboardLayout>
                 <div className="p-4">
