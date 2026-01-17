@@ -8,7 +8,7 @@ from app.core import security
 from app.core.config import settings
 from app.crud.crud_user import user as crud_user
 from app.schemas.token import Token
-from app.schemas.user import User
+from app.schemas.user import User, UserCreate
 
 router = APIRouter()
 
@@ -35,3 +35,21 @@ async def login_access_token(
         ),
         "token_type": "bearer",
     }
+
+@router.post("/register", response_model=User)
+async def register_user(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    user_in: UserCreate,
+) -> Any:
+    """
+    Register a new user.
+    """
+    user = await crud_user.get_by_email(db, email=user_in.email)
+    if user:
+        raise HTTPException(
+            status_code=400,
+            detail="The user with this email already exists in the system.",
+        )
+    user = await crud_user.create(db, obj_in=user_in)
+    return user

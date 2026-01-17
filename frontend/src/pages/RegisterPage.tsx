@@ -11,19 +11,27 @@ export const RegisterPage: React.FC = () => {
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
+        console.log('Registration attempt started...');
         e.preventDefault();
         try {
-            await axios.post('http://localhost:8000/api/v1/auth/register', {
+            console.log('Sending data to backend:', { email, fullName, roleId });
+            const response = await axios.post('http://localhost:8000/api/v1/auth/register', {
                 email,
                 password,
                 full_name: fullName,
                 role_id: roleId,
                 is_active: true
             });
+            console.log('Registration successful!', response.data);
             navigate('/login');
-        } catch (err) {
-            setError('Registration failed. Please try again.');
-            console.error(err);
+        } catch (err: any) {
+            if (err.response && err.response.data && err.response.data.detail) {
+                console.error('Registration validation error:', err.response.data.detail);
+                setError(`Registration failed: ${JSON.stringify(err.response.data.detail)}`);
+            } else {
+                console.error('Registration failed error:', err);
+                setError('Registration failed. Please try again.');
+            }
         }
     };
 

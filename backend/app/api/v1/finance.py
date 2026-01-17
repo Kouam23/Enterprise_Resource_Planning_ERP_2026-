@@ -44,3 +44,34 @@ async def read_transaction(
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
     return transaction
+
+@router.put("/{id}", response_model=Transaction)
+async def update_transaction(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    id: int,
+    transaction_in: TransactionUpdate,
+) -> Any:
+    """
+    Update a transaction.
+    """
+    transaction = await crud_transaction.get(db, id=id)
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    transaction = await crud_transaction.update(db, db_obj=transaction, obj_in=transaction_in)
+    return transaction
+
+@router.delete("/{id}", response_model=Transaction)
+async def delete_transaction(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    id: int,
+) -> Any:
+    """
+    Delete a transaction.
+    """
+    transaction = await crud_transaction.get(db, id=id)
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    transaction = await crud_transaction.remove(db, id=id)
+    return transaction

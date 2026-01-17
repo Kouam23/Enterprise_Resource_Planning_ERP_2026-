@@ -44,3 +44,34 @@ async def read_employee(
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     return employee
+
+@router.put("/{id}", response_model=Employee)
+async def update_employee(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    id: int,
+    employee_in: EmployeeUpdate,
+) -> Any:
+    """
+    Update an employee.
+    """
+    employee = await crud_employee.get(db, id=id)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    employee = await crud_employee.update(db, db_obj=employee, obj_in=employee_in)
+    return employee
+
+@router.delete("/{id}", response_model=Employee)
+async def delete_employee(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    id: int,
+) -> Any:
+    """
+    Delete an employee.
+    """
+    employee = await crud_employee.get(db, id=id)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    employee = await crud_employee.remove(db, id=id)
+    return employee
