@@ -5,5 +5,6 @@ export * from './CoursesPage';
 export * from './ProgramsPage';
 export * from './GradesPage';
 export * from './StudentsPage';
+export * from './MarketingPage';
 export * from './FinancePage';
 export * from './HRPage';

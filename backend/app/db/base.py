@@ -7,3 +7,9 @@ from app.models.program import Program
 from app.models.grade import Grade
 from app.models.transaction import Transaction
 from app.models.employee import Employee
+from app.models.fee_structure import FeeStructure
+from app.models.tuition_invoice import TuitionInvoice
+from app.models.scholarship import Scholarship
+from app.models.expense import ExpenseApproval
+from app.models.marketing import MarketingCampaign, Lead
+from app.models.finance_ext import TuitionInstallment, Vendor

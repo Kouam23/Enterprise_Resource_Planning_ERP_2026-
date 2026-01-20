@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Users, BookOpen, CreditCard, Award, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, CreditCard, Award, GraduationCap, Megaphone } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -13,6 +13,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         { name: 'Programs', href: '/programs', icon: GraduationCap },
         { name: 'Grades', href: '/grades', icon: Award },
         { name: 'Students', href: '/students', icon: Users },
+        { name: 'Marketing', href: '/marketing', icon: Megaphone },
         { name: 'Finance', href: '/finance', icon: CreditCard },
         { name: 'HR', href: '/hr', icon: Users },
     ];
@@ -33,8 +34,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                                 key={item.name}
                                 to={item.href}
                                 className={`flex items-center space-x-3 py-2.5 px-4 rounded-xl transition-all duration-200 ${isActive
-                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
-                                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                                     }`}
                             >
                                 <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />

@@ -1,4 +1,4 @@
-from app.api.v1 import auth, courses, students, finance, hr, analytics, programs, grades, academic_docs
+from app.api.v1 import auth, courses, students, finance, hr, analytics, programs, grades, academic_docs, fee_structures, tuition_invoices, scholarships, expenses, marketing, finance_ext
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -10,3 +10,9 @@ api_router.include_router(finance.router, prefix="/finance", tags=["finance"])
 api_router.include_router(hr.router, prefix="/hr", tags=["hr"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(academic_docs.router, prefix="/academic", tags=["academic"])
+api_router.include_router(fee_structures.router, prefix="/fee-structures", tags=["finance"])
+api_router.include_router(tuition_invoices.router, prefix="/tuition-invoices", tags=["finance"])
+api_router.include_router(scholarships.router, prefix="/scholarships", tags=["finance"])
+api_router.include_router(expenses.router, prefix="/expenses", tags=["finance"])
+api_router.include_router(marketing.router, prefix="/marketing", tags=["marketing"])
+api_router.include_router(finance_ext.router, prefix="/finance-ext", tags=["finance"])

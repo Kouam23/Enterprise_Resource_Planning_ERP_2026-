@@ -7,6 +7,32 @@ from app.schemas.transaction import Transaction, TransactionCreate, TransactionU
 
 router = APIRouter()
 
+@router.get("/stats")
+async def get_finance_stats(
+    db: AsyncSession = Depends(deps.get_db),
+) -> Any:
+    transactions = await crud_transaction.get_multi(db, limit=1000)
+    income = sum(t.amount for t in transactions if t.type == "income")
+    expenses = sum(t.amount for t in transactions if t.type == "expense")
+    return {
+        "total_income": income,
+        "total_expenses": expenses,
+        "net_profit": income - expenses,
+        "transaction_count": len(transactions)
+    }
+
+@router.post("/apply-late-fees")
+async def apply_late_fees(
+    db: AsyncSession = Depends(deps.get_db),
+) -> Any:
+    return await finance_service.apply_late_fees(db)
+
+@router.get("/recruitment-funnel")
+async def get_funnel(
+    db: AsyncSession = Depends(deps.get_db),
+) -> Any:
+    return await finance_service.get_recruitment_funnel(db)
+
 @router.get("/", response_model=List[Transaction])
 async def read_transactions(
     db: AsyncSession = Depends(deps.get_db),
