@@ -1,5 +1,4 @@
-from typing import Optional
-from pydantic import BaseModel
+from typing import Optional, List
 
 # Shared properties
 class CourseBase(BaseModel):
@@ -7,6 +6,12 @@ class CourseBase(BaseModel):
     description: Optional[str] = None
     credits: Optional[int] = 3
     code: Optional[str] = None
+    is_mandatory: Optional[bool] = True
+    category: Optional[str] = "core"
+    capacity: Optional[int] = 30
+    hours_per_week: Optional[int] = 3
+    prerequisite_ids: Optional[List[int]] = []
+    corequisite_ids: Optional[List[int]] = []
 
 # Properties to receive via API on creation
 class CourseCreate(CourseBase):
@@ -25,7 +30,8 @@ class CourseInDBBase(CourseBase):
 
 # Additional properties to return via API
 class Course(CourseInDBBase):
-    pass
+    prerequisites: List["Course"] = []
+    co_requisites: List["Course"] = []
 
 # Additional properties stored in DB
 class CourseInDB(CourseInDBBase):

@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Date
+from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 
 class Student(Base):
@@ -7,3 +8,10 @@ class Student(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     enrollment_date = Column(Date)
     status = Column(String, default="active") # active, inactive, graduated
+    
+    # New fields
+    program_id = Column(Integer, ForeignKey("program.id"))
+    
+    # Relationships
+    program = relationship("Program", back_populates="students")
+    grades = relationship("Grade", back_populates="student")

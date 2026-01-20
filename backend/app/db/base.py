@@ -3,5 +3,7 @@ from app.models.user import User
 from app.models.role import Role
 from app.models.course import Course
 from app.models.student import Student
+from app.models.program import Program
+from app.models.grade import Grade
 from app.models.transaction import Transaction
 from app.models.employee import Employee
