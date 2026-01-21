@@ -1,4 +1,4 @@
-from app.crud.base import CRUDBase
+n mk, from app.crud.base import CRUDBase
 from app.models.finance_ext import TuitionInstallment, Vendor
 from app.schemas.finance_ext import (
     TuitionInstallmentCreate, TuitionInstallmentUpdate,

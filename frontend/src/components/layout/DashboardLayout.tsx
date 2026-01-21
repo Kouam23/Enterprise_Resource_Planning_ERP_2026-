@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Users, BookOpen, CreditCard, Award, GraduationCap, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, CreditCard, Award, GraduationCap, Megaphone, Package } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -16,6 +16,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         { name: 'Marketing', href: '/marketing', icon: Megaphone },
         { name: 'Finance', href: '/finance', icon: CreditCard },
         { name: 'HR', href: '/hr', icon: Users },
+        { name: 'Assets', href: '/assets', icon: Package },
     ];
 
     return (

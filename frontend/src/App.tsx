@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { LoginPage, RegisterPage, DashboardPage, CoursesPage, ProgramsPage, StudentsPage, FinancePage, HRPage, GradesPage, MarketingPage } from './pages';
+import { LoginPage, RegisterPage, DashboardPage, CoursesPage, ProgramsPage, StudentsPage, FinancePage, HRPage, GradesPage, MarketingPage, AssetsPage } from './pages';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -23,6 +23,7 @@ function App() {
           <Route path="/marketing" element={<ProtectedRoute><MarketingPage /></ProtectedRoute>} />
           <Route path="/finance" element={<ProtectedRoute><FinancePage /></ProtectedRoute>} />
           <Route path="/hr" element={<ProtectedRoute><HRPage /></ProtectedRoute>} />
+          <Route path="/assets" element={<ProtectedRoute><AssetsPage /></ProtectedRoute>} />
         </Routes>
       </Router>
     </AuthProvider>

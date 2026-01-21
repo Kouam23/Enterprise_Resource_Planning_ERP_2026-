@@ -1,0 +1,133 @@
+from typing import Any, List
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.api import deps
+from app.crud.crud_hr_ext import payroll as crud_payroll, leave as crud_leave, asset as crud_asset
+from app.schemas.hr_ext import (
+    Payroll, PayrollCreate, PayrollUpdate,
+    LeaveRequest, LeaveRequestCreate, LeaveRequestUpdate,
+    Asset, AssetCreate, AssetUpdate
+)
+from app.services.hr_service import hr_service
+
+router = APIRouter()
+
+# --- Payroll Endpoints ---
+@router.post("/payroll/generate")
+async def generate_payroll(
+    month: int,
+    year: int,
+    db: AsyncSession = Depends(deps.get_db),
+) -> Any:
+    return await hr_service.generate_monthly_payroll(db, month=month, year=year)
+
+@router.get("/payroll", response_model=List[Payroll])
+async def read_payroll(
+    db: AsyncSession = Depends(deps.get_db),
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
+    return await crud_payroll.get_multi(db, skip=skip, limit=limit)
+
+@router.post("/payroll/{id}/approve")
+async def approve_payroll(
+    id: int,
+    db: AsyncSession = Depends(deps.get_db),
+) -> Any:
+    return await hr_service.approve_payroll(db, payroll_id=id)
+
+# --- Leave Endpoints ---
+@router.post("/leave", response_model=LeaveRequest)
+async def request_leave(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    leave_in: LeaveRequestCreate,
+) -> Any:
+    return await crud_leave.create(db, obj_in=leave_in)
+
+@router.get("/leave", response_model=List[LeaveRequest])
+async def read_leaves(
+    db: AsyncSession = Depends(deps.get_db),
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
+    return await crud_leave.get_multi(db, skip=skip, limit=limit)
+
+# --- Asset Endpoints ---
+@router.get("/assets", response_model=List[Asset])
+async def read_assets(
+    db: AsyncSession = Depends(deps.get_db),
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
+    return await crud_asset.get_multi(db, skip=skip, limit=limit)
+
+@router.post("/assets", response_model=Asset)
+async def create_asset(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    asset_in: AssetCreate,
+) -> Any:
+    return await crud_asset.create(db, obj_in=asset_in)
+
+@router.put("/assets/{id}", response_model=Asset)
+async def update_asset(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    id: int,
+    asset_in: AssetUpdate,
+) -> Any:
+# --- Attendance Endpoints ---
+@router.post("/attendance/check-in", response_model=Attendance)
+async def check_in(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    att_in: AttendanceCreate,
+) -> Any:
+    return await crud_attendance.create(db, obj_in=att_in)
+
+@router.post("/attendance/{id}/check-out", response_model=Attendance)
+async def check_out(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    id: int,
+) -> Any:
+    db_obj = await crud_attendance.get(db, id=id)
+    if not db_obj:
+        raise HTTPException(status_code=404, detail="Attendance record not found")
+    return await crud_attendance.update(db, db_obj=db_obj, obj_in={"check_out": datetime.now()})
+
+@router.get("/attendance", response_model=List[Attendance])
+async def read_attendance(
+    db: AsyncSession = Depends(deps.get_db),
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
+    return await crud_attendance.get_multi(db, skip=skip, limit=limit)
+
+# --- Performance & OKR Endpoints ---
+@router.get("/okrs", response_model=List[OKR])
+async def read_okrs(
+    db: AsyncSession = Depends(deps.get_db),
+    employee_id: Optional[int] = None,
+) -> Any:
+    if employee_id:
+        result = await db.execute(select(OKR).where(OKR.employee_id == employee_id))
+        return result.scalars().all()
+    return await crud_okr.get_multi(db)
+
+@router.post("/okrs", response_model=OKR)
+async def create_okr(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    okr_in: OKRCreate,
+) -> Any:
+    return await crud_okr.create(db, obj_in=okr_in)
+
+@router.post("/reviews", response_model=PerformanceReview)
+async def create_review(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    review_in: PerformanceReviewCreate,
+) -> Any:
+    return await crud_performance.create(db, obj_in=review_in)
