@@ -53,3 +53,21 @@ async def register_user(
         )
     user = await crud_user.create(db, obj_in=user_in)
     return user
+@router.post("/sso/{provider}")
+async def sso_login(
+    provider: str,
+    db: AsyncSession = Depends(deps.get_db)
+) -> Any:
+    """
+    Simulate SSO/OAuth login.
+    """
+    # Simulate finding a user or creating one from SSO provider data
+    user = await crud_user.get(db, id=1) # Demo user
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    return {
+        "access_token": security.create_access_token(
+            user.id, expires_delta=access_token_expires
+        ),
+        "token_type": "bearer",
+        "provider": provider
+    }

@@ -16,10 +16,11 @@ async def init_db():
 
         print("Seeding roles...")
         initial_roles = [
-            {"id": 1, "name": "Admin", "permissions": {"all": True}},
-            {"id": 2, "name": "Staff", "permissions": {"read": True, "write": True}},
-            {"id": 3, "name": "Teacher", "permissions": {"read": True, "grades": True}},
-            {"id": 4, "name": "Student", "permissions": {"read": True}},
+            {"id": 1, "name": "Super Admin", "permissions": {"all": True}},
+            {"id": 2, "name": "Administrator", "permissions": {"modules": ["finance", "hr", "academic"], "write": True}},
+            {"id": 3, "name": "Instructor", "permissions": {"read": True, "grades": True, "attendance": True}},
+            {"id": 4, "name": "Student", "permissions": {"read": True, "view_grades": True}},
+            {"id": 5, "name": "Staff", "permissions": {"read": True, "assets": True, "payroll_view": True}},
         ]
         
         for role_data in initial_roles:

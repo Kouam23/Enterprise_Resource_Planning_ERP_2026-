@@ -1,6 +1,7 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { LoginPage, RegisterPage, DashboardPage, CoursesPage, ProgramsPage, StudentsPage, FinancePage, HRPage, GradesPage, MarketingPage, AssetsPage, AnalyticsPage, CollaborationPage } from './pages';
+import { LoginPage, RegisterPage, DashboardPage, CoursesPage, ProgramsPage, StudentsPage, FinancePage, HRPage, GradesPage, MarketingPage, AssetsPage, AnalyticsPage, CollaborationPage, SecurityDashboard, SettingsPage } from './pages';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -26,6 +27,8 @@ function App() {
           <Route path="/assets" element={<ProtectedRoute><AssetsPage /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
           <Route path="/collaboration" element={<ProtectedRoute><CollaborationPage /></ProtectedRoute>} />
+          <Route path="/security" element={<ProtectedRoute><SecurityDashboard /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         </Routes>
       </Router>
     </AuthProvider>

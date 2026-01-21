@@ -41,6 +41,8 @@ class Message(Base):
     content = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     is_read = Column(Boolean, default=False)
+    is_encrypted = Column(Boolean, default=False)
+    encryption_hash = Column(String, nullable=True)
 
     sender = relationship("User", foreign_keys=[sender_id])
     receiver = relationship("User", foreign_keys=[receiver_id])

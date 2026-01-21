@@ -9,5 +9,7 @@ export * from './MarketingPage';
 export * from './AssetsPage';
 export * from './AnalyticsPage';
 export * from './CollaborationPage';
+export * from './SecurityDashboard';
+export * from './SettingsPage';
 export * from './FinancePage';
 export * from './HRPage';

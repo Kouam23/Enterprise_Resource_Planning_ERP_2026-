@@ -15,6 +15,28 @@ reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login"
 )
 
+from app.models.role import Role
+from app.services.audit_service import audit_service
+
+class RoleChecker:
+    def __init__(self, allowed_roles: list[str]):
+        self.allowed_roles = allowed_roles
+
+    async def __call__(
+        self,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db)
+    ) -> User:
+        # In this implementation, we assume role name is what we check
+        # We fetch role for the user
+        role_result = await db.get(Role, current_user.role_id)
+        if not role_result or role_result.name not in self.allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="The user doesn't have enough privileges",
+            )
+        return current_user
+
 async def get_current_user(
     db: AsyncSession = Depends(get_db),
     token: str = Depends(reusable_oauth2)
@@ -39,7 +61,7 @@ async def get_current_user(
 def get_current_active_superuser(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    if current_user.role_id != 1: # Assuming role_id 1 is superuser for now, will improve with RBAC
+    if current_user.role_id != 1: 
         raise HTTPException(
             status_code=400, detail="The user doesn't have enough privileges"
         )

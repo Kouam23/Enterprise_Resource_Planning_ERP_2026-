@@ -3,7 +3,8 @@ import axios from 'axios';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 import {
     MessageSquare, Send, User,
-    Calendar, Megaphone, Plus, Hash
+    Calendar, Megaphone, Plus, Hash,
+    Video, Lock
 } from 'lucide-react';
 
 interface Notice {
@@ -29,6 +30,8 @@ export const CollaborationPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'notices' | 'forum' | 'messages'>('notices');
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');
+    const [isEncrypted, setIsEncrypted] = useState(false);
+    const [meetingLink, setMeetingLink] = useState<{ link: string, password: string } | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -69,12 +72,22 @@ export const CollaborationPage: React.FC = () => {
             await axios.post('http://localhost:8000/api/v1/communication/messages', {
                 sender_id: 1,
                 receiver_id: 2,
-                content: newMessage
+                content: newMessage,
+                is_encrypted: isEncrypted
             });
             setNewMessage('');
             fetchMessages();
         } catch (error) {
             console.error('Error sending message:', error);
+        }
+    };
+
+    const handleGenerateMeeting = async () => {
+        try {
+            const res = await axios.post('http://localhost:8000/api/v1/communication/meeting-link?topic=General Discussion');
+            setMeetingLink(res.data);
+        } catch (error) {
+            console.error('Error generating meeting link:', error);
         }
     };
 
@@ -186,14 +199,42 @@ export const CollaborationPage: React.FC = () => {
                                             <p className="text-xs font-bold text-indigo-500 uppercase tracking-tighter">Connected to Faculty Support</p>
                                         </div>
                                     </div>
+                                    <div className="flex space-x-2">
+                                        <button
+                                            onClick={handleGenerateMeeting}
+                                            className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-50 transition-all"
+                                        >
+                                            <Video className="w-4 h-4 text-emerald-500" />
+                                            <span>Start Meeting</span>
+                                        </button>
+                                    </div>
                                 </div>
+
+                                {meetingLink && (
+                                    <div className="mx-6 mt-4 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex justify-between items-center animate-in fade-in slide-in-from-top-4">
+                                        <div>
+                                            <p className="text-xs font-black text-emerald-800 uppercase mb-1">Live Meeting Created</p>
+                                            <a href={meetingLink.link} target="_blank" rel="noreferrer" className="text-sm font-bold text-emerald-600 underline">Join Zoom Session</a>
+                                        </div>
+                                        <button onClick={() => setMeetingLink(null)} className="text-emerald-400 hover:text-emerald-600">
+                                            <Plus className="w-4 h-4 rotate-45" />
+                                        </button>
+                                    </div>
+                                )}
+
                                 <div className="flex-1 overflow-y-auto p-8 space-y-6">
                                     {messages.map((m: any) => (
                                         <div key={m.id} className={`flex ${m.sender_id === 1 ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[70%] p-5 rounded-[24px] font-medium shadow-sm ${m.sender_id === 1
+                                            <div className={`max-w-[70%] p-5 rounded-[24px] font-medium shadow-sm relative ${m.sender_id === 1
                                                 ? 'bg-indigo-600 text-white rounded-tr-none'
                                                 : 'bg-slate-100 text-slate-800 rounded-tl-none'
                                                 }`}>
+                                                {m.is_encrypted && (
+                                                    <div className="flex items-center space-x-1 mb-2 text-[10px] font-black uppercase tracking-widest opacity-60">
+                                                        <Lock className="w-3 h-3" />
+                                                        <span>End-to-End Encrypted</span>
+                                                    </div>
+                                                )}
                                                 {m.content}
                                                 <div className={`text-[10px] mt-2 opacity-50 ${m.sender_id === 1 ? 'text-right' : 'text-left'}`}>
                                                     {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -209,6 +250,16 @@ export const CollaborationPage: React.FC = () => {
                                     )}
                                 </div>
                                 <div className="p-6 border-t border-slate-100 bg-white">
+                                    <div className="flex space-x-3 items-center mb-4">
+                                        <button
+                                            onClick={() => setIsEncrypted(!isEncrypted)}
+                                            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${isEncrypted ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400'
+                                                }`}
+                                        >
+                                            <Lock className={`w-3 h-3 ${isEncrypted ? 'text-indigo-600' : 'text-slate-400'}`} />
+                                            <span>Encryption: {isEncrypted ? 'ON' : 'OFF'}</span>
+                                        </button>
+                                    </div>
                                     <div className="flex space-x-3 items-center bg-slate-50 p-2 rounded-2xl border border-slate-100">
                                         <input
                                             type="text"

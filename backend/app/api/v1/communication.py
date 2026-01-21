@@ -91,15 +91,51 @@ async def read_messages(
     messages = result.scalars().all()
     return messages
 
+import hashlib
+from app.services.integration_service import integration_service
+from app.services.audit_service import audit_service
+
 @router.post("/messages", response_model=MessageSchema)
 async def send_message(
     *,
     db: AsyncSession = Depends(deps.get_db),
     message_in: MessageCreate,
-    sender_id: int
+    sender_id: int = 1 # Demo sender
 ) -> Any:
-    obj = Message(**message_in.dict(), sender_id=sender_id)
+    content = message_in.content
+    e_hash = None
+    if message_in.is_encrypted:
+        # Simulate E2EE by hashing the content and storing a 'locked' version
+        e_hash = hashlib.sha256(content.encode()).hexdigest()
+        content = "[ENCRYPTED CONTENT: " + e_hash[:16] + "...]"
+
+    obj = Message(
+        **message_in.dict(exclude={"content"}),
+        content=content,
+        sender_id=sender_id,
+        encryption_hash=e_hash
+    )
     db.add(obj)
+    
+    # Audit log for sensitive communication
+    await audit_service.log_action(
+        db,
+        user_id=sender_id,
+        action="SEND_MESSAGE",
+        target_table="message",
+        changes={"is_encrypted": message_in.is_encrypted}
+    )
+    
     await db.commit()
     await db.refresh(obj)
     return obj
+
+@router.post("/meeting-link")
+async def create_meeting(
+    topic: str,
+    current_user: Any = Depends(deps.get_current_user)
+) -> Any:
+    """
+    Generate a simulated third-party meeting link.
+    """
+    return await integration_service.generate_meeting_link(topic)

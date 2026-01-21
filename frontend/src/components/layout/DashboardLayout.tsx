@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Users, BookOpen, CreditCard, Award, GraduationCap, Megaphone, Package, BarChart3, Languages, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, CreditCard, Award, GraduationCap, Megaphone, Package, BarChart3, Languages, MessageSquare, Shield, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -21,7 +21,14 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         { name: t('common.assets'), href: '/assets', icon: Package },
         { name: t('common.analytics'), href: '/analytics', icon: BarChart3 },
         { name: 'Collaboration', href: '/collaboration', icon: MessageSquare },
+        { name: 'Security Audit', href: '/security', icon: Shield },
+        { name: 'Settings', href: '/settings', icon: Settings },
     ];
+
+    useEffect(() => {
+        const activePage = navigation.find(n => n.href === location.pathname);
+        document.title = `${activePage?.name || 'ERP'} | Academic Hub`;
+    }, [location.pathname]);
 
     const changeLanguage = (lng: string) => {
         i18n.changeLanguage(lng);
@@ -53,16 +60,6 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                         );
                     })}
                 </nav>
-                <Link
-                    to="/analytics"
-                    className={`flex items-center space-x-3 py-2.5 px-4 rounded-xl transition-all duration-200 ${location.pathname === '/analytics'
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-slate-400 hover:bg-slate-800'
-                        }`}
-                >
-                    <BarChart3 className="w-5 h-5" />
-                    <span className="font-medium">{t('common.analytics')}</span>
-                </Link>
 
                 <div className="p-4 border-t border-slate-800 space-y-4">
                     <div className="flex items-center space-x-2 px-4 py-2 bg-slate-800 rounded-xl">

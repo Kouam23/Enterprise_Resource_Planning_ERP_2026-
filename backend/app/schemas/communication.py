@@ -50,6 +50,7 @@ class ForumPost(ForumPostBase):
 class MessageBase(BaseModel):
     receiver_id: int
     content: str
+    is_encrypted: Optional[bool] = False
 
 class MessageCreate(MessageBase):
     pass
@@ -59,5 +60,7 @@ class Message(MessageBase):
     sender_id: int
     created_at: datetime
     is_read: bool
+    is_encrypted: bool
+    encryption_hash: Optional[str] = None
     class Config:
         from_attributes = True
