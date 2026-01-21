@@ -18,3 +18,4 @@ from app.models.leave import LeaveRequest
 from app.models.asset import Asset
 from app.models.attendance import Attendance
 from app.models.performance import OKR, PerformanceReview
+from app.models.communication import Notice, ForumPost, ForumComment

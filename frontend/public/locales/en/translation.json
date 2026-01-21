@@ -1,0 +1,25 @@
+{
+    "common": {
+        "dashboard": "Dashboard",
+        "students": "Students",
+        "courses": "Courses",
+        "finance": "Finance",
+        "hr": "HR",
+        "assets": "Assets",
+        "analytics": "Analytics",
+        "marketing": "Marketing",
+        "settings": "Settings",
+        "logout": "Logout"
+    },
+    "dashboard": {
+        "welcome": "Welcome back, {{name}}",
+        "overview": "System Overview"
+    },
+    "analytics": {
+        "title": "Predictive Analytics",
+        "atRisk": "At-Risk Students",
+        "riskScore": "Risk Score",
+        "status": "Academic Status",
+        "recommendations": "AI Recommendations"
+    }
+}

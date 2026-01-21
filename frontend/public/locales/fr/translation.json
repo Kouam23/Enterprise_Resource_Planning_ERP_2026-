@@ -1,0 +1,25 @@
+{
+    "common": {
+        "dashboard": "Tableau de bord",
+        "students": "Étudiants",
+        "courses": "Cours",
+        "finance": "Finance",
+        "hr": "RH",
+        "assets": "Actifs",
+        "analytics": "Analytique",
+        "marketing": "Marketing",
+        "settings": "Paramètres",
+        "logout": "Déconnexion"
+    },
+    "dashboard": {
+        "welcome": "Bon retour, {{name}}",
+        "overview": "Aperçu du système"
+    },
+    "analytics": {
+        "title": "Analytique Prédictive",
+        "atRisk": "Étudiants à Risque",
+        "riskScore": "Score de Risque",
+        "status": "Statut Académique",
+        "recommendations": "Recommandations IA"
+    }
+}

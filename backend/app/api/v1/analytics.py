@@ -1,45 +1,48 @@
-
-from typing import Any
-from fastapi import APIRouter, Depends
+from typing import Any, List
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 from app.api import deps
-from app.models.course import Course
+from app.services.analytics_service import analytics_service
 from app.models.student import Student
-from app.models.transaction import Transaction
-from app.models.employee import Employee
+from sqlalchemy.future import select
 
 router = APIRouter()
 
-@router.get("/stats")
-async def get_stats(
+@router.get("/student-risk/{student_id}")
+async def get_student_risk(
+    student_id: int,
     db: AsyncSession = Depends(deps.get_db)
 ) -> Any:
     """
-    Get system statistics for dashboard.
+    Get AI-driven risk assessment for a specific student.
     """
-    # Get total students
-    student_count_res = await db.execute(select(func.count(Student.id)))
-    student_count = student_count_res.scalar() or 0
+    return await analytics_service.predict_student_risk(db, student_id=student_id)
+
+@router.get("/course-recommendations/{student_id}")
+async def get_course_recommendations(
+    student_id: int,
+    db: AsyncSession = Depends(deps.get_db)
+) -> Any:
+    """
+    Get AI-driven course recommendations for a student.
+    """
+    return await analytics_service.get_course_recommendations(db, student_id=student_id)
+
+@router.get("/at-risk-students")
+async def get_at_risk_students(
+    db: AsyncSession = Depends(deps.get_db),
+    threshold: int = 40
+) -> Any:
+    """
+    Get a list of all students whose risk score is above the threshold.
+    """
+    result = await db.execute(select(Student))
+    students = result.scalars().all()
     
-    # Get total courses
-    course_count_res = await db.execute(select(func.count(Course.id)))
-    course_count = course_count_res.scalar() or 0
-    
-    # Get total employees
-    employee_count_res = await db.execute(select(func.count(Employee.id)))
-    employee_count = employee_count_res.scalar() or 0
-    
-    # Get financial balance
-    income_res = await db.execute(select(func.sum(Transaction.amount)).where(Transaction.type == "income"))
-    income = income_res.scalar() or 0
-    expense_res = await db.execute(select(func.sum(Transaction.amount)).where(Transaction.type == "expense"))
-    expense = expense_res.scalar() or 0
-    balance = income - expense
-    
-    return {
-        "total_students": student_count,
-        "total_courses": course_count,
-        "total_employees": employee_count,
-        "balance": balance
-    }
+    at_risk = []
+    for student in students:
+        prediction = await analytics_service.predict_student_risk(db, student.id)
+        if prediction.get("risk_score", 0) >= threshold:
+            at_risk.append(prediction)
+            
+    return sorted(at_risk, key=lambda x: x["risk_score"], reverse=True)

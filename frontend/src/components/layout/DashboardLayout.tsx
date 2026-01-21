@@ -1,23 +1,31 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Users, BookOpen, CreditCard, Award, GraduationCap, Megaphone, Package } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, CreditCard, Award, GraduationCap, Megaphone, Package, BarChart3, Languages, MessageSquare } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, logout } = useAuth();
     const location = useLocation();
+    const { t, i18n } = useTranslation();
 
     const navigation = [
-        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'Courses', href: '/courses', icon: BookOpen },
-        { name: 'Programs', href: '/programs', icon: GraduationCap },
-        { name: 'Grades', href: '/grades', icon: Award },
-        { name: 'Students', href: '/students', icon: Users },
-        { name: 'Marketing', href: '/marketing', icon: Megaphone },
-        { name: 'Finance', href: '/finance', icon: CreditCard },
-        { name: 'HR', href: '/hr', icon: Users },
-        { name: 'Assets', href: '/assets', icon: Package },
+        { name: t('common.dashboard'), href: '/dashboard', icon: LayoutDashboard },
+        { name: t('common.courses'), href: '/courses', icon: BookOpen },
+        { name: t('common.programs'), href: '/programs', icon: GraduationCap },
+        { name: t('common.grades'), href: '/grades', icon: Award },
+        { name: t('common.students'), href: '/students', icon: Users },
+        { name: t('common.marketing'), href: '/marketing', icon: Megaphone },
+        { name: t('common.finance'), href: '/finance', icon: CreditCard },
+        { name: t('common.hr'), href: '/hr', icon: Users },
+        { name: t('common.assets'), href: '/assets', icon: Package },
+        { name: t('common.analytics'), href: '/analytics', icon: BarChart3 },
+        { name: 'Collaboration', href: '/collaboration', icon: MessageSquare },
     ];
+
+    const changeLanguage = (lng: string) => {
+        i18n.changeLanguage(lng);
+    };
 
     return (
         <div className="flex h-screen bg-slate-50">
@@ -45,12 +53,34 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                         );
                     })}
                 </nav>
-                <div className="p-4 border-t border-slate-800">
+                <Link
+                    to="/analytics"
+                    className={`flex items-center space-x-3 py-2.5 px-4 rounded-xl transition-all duration-200 ${location.pathname === '/analytics'
+                        ? 'bg-indigo-600 text-white'
+                        : 'text-slate-400 hover:bg-slate-800'
+                        }`}
+                >
+                    <BarChart3 className="w-5 h-5" />
+                    <span className="font-medium">{t('common.analytics')}</span>
+                </Link>
+
+                <div className="p-4 border-t border-slate-800 space-y-4">
+                    <div className="flex items-center space-x-2 px-4 py-2 bg-slate-800 rounded-xl">
+                        <Languages className="w-4 h-4 text-slate-400" />
+                        <select
+                            onChange={(e) => changeLanguage(e.target.value)}
+                            className="bg-transparent text-xs font-bold text-slate-400 focus:outline-none w-full cursor-pointer"
+                            value={i18n.language}
+                        >
+                            <option value="en">English</option>
+                            <option value="fr">Français</option>
+                        </select>
+                    </div>
                     <button
                         onClick={logout}
                         className="w-full py-2.5 bg-slate-800 text-red-400 font-semibold rounded-xl hover:bg-red-500 hover:text-white transition-all duration-200"
                     >
-                        Sign Out
+                        {t('common.logout')}
                     </button>
                 </div>
             </div>
