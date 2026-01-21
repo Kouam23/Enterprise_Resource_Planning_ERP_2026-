@@ -24,6 +24,7 @@ async def create_course(
     *,
     db: AsyncSession = Depends(deps.get_db),
     course_in: CourseCreate,
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator"]))
 ) -> Any:
     """
     Create new course.
@@ -37,6 +38,7 @@ async def update_course(
     db: AsyncSession = Depends(deps.get_db),
     id: int,
     course_in: CourseUpdate,
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator"]))
 ) -> Any:
     """
     Update a course.
@@ -66,6 +68,7 @@ async def delete_course(
     *,
     db: AsyncSession = Depends(deps.get_db),
     id: int,
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator"]))
 ) -> Any:
     """
     Delete a course.

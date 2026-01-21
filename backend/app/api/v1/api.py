@@ -1,3 +1,4 @@
+from fastapi import APIRouter
 from app.api.v1 import auth, courses, students, finance, hr, analytics, communication, programs, grades, academic_docs, fee_structures, tuition_invoices, scholarships, expenses, marketing, finance_ext, hr_ext, audit
 
 api_router = APIRouter()

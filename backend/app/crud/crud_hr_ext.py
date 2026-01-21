@@ -1,3 +1,4 @@
+from typing import Any
 from app.crud.base import CRUDBase
 from app.models.payroll import Payroll
 from app.models.leave import LeaveRequest

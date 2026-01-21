@@ -14,7 +14,7 @@ async def read_audit_logs(
     skip: int = 0,
     limit: int = 100,
     target_table: Optional[str] = None,
-    current_user: Any = Depends(deps.RoleChecker(["admin", "superuser"]))
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin"]))
 ) -> Any:
     query = select(AuditLog)
     if target_table:

@@ -6,14 +6,6 @@ from app.models.role import Role
 
 async def init_db():
     async with AsyncSessionLocal() as db:
-        # Check if roles already exist
-        result = await db.execute(select(Role))
-        roles = result.scalars().all()
-        
-        if roles:
-            print("Roles already exist. Skipping seeding.")
-            return
-
         print("Seeding roles...")
         initial_roles = [
             {"id": 1, "name": "Super Admin", "permissions": {"all": True}},
@@ -25,7 +17,7 @@ async def init_db():
         
         for role_data in initial_roles:
             role = Role(**role_data)
-            db.add(role)
+            await db.merge(role)
         
         await db.commit()
         print("Roles seeded successfully!")

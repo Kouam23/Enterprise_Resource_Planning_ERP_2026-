@@ -24,6 +24,7 @@ async def create_employee(
     *,
     db: AsyncSession = Depends(deps.get_db),
     employee_in: EmployeeCreate,
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator", "Staff"]))
 ) -> Any:
     """
     Create new employee.
@@ -66,6 +67,7 @@ async def delete_employee(
     *,
     db: AsyncSession = Depends(deps.get_db),
     id: int,
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator"]))
 ) -> Any:
     """
     Delete an employee.

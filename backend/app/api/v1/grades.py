@@ -29,6 +29,7 @@ async def create_grade(
     *,
     db: AsyncSession = Depends(deps.get_db),
     grade_in: GradeCreate,
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator", "Instructor"]))
 ) -> Any:
     """
     Create new grade.

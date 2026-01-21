@@ -10,6 +10,7 @@ router = APIRouter()
 @router.get("/stats")
 async def get_finance_stats(
     db: AsyncSession = Depends(deps.get_db),
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator", "Staff"]))
 ) -> Any:
     transactions = await crud_transaction.get_multi(db, limit=1000)
     income = sum(t.amount for t in transactions if t.type == "income")
@@ -24,6 +25,7 @@ async def get_finance_stats(
 @router.post("/apply-late-fees")
 async def apply_late_fees(
     db: AsyncSession = Depends(deps.get_db),
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator"]))
 ) -> Any:
     return await finance_service.apply_late_fees(db)
 
@@ -50,6 +52,7 @@ async def create_transaction(
     *,
     db: AsyncSession = Depends(deps.get_db),
     transaction_in: TransactionCreate,
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator", "Staff"]))
 ) -> Any:
     """
     Create new transaction.

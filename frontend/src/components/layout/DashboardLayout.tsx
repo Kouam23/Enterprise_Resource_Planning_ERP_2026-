@@ -10,20 +10,30 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     const { t, i18n } = useTranslation();
 
     const navigation = [
-        { name: t('common.dashboard'), href: '/dashboard', icon: LayoutDashboard },
-        { name: t('common.courses'), href: '/courses', icon: BookOpen },
-        { name: t('common.programs'), href: '/programs', icon: GraduationCap },
-        { name: t('common.grades'), href: '/grades', icon: Award },
-        { name: t('common.students'), href: '/students', icon: Users },
-        { name: t('common.marketing'), href: '/marketing', icon: Megaphone },
-        { name: t('common.finance'), href: '/finance', icon: CreditCard },
-        { name: t('common.hr'), href: '/hr', icon: Users },
-        { name: t('common.assets'), href: '/assets', icon: Package },
-        { name: t('common.analytics'), href: '/analytics', icon: BarChart3 },
-        { name: 'Collaboration', href: '/collaboration', icon: MessageSquare },
-        { name: 'Security Audit', href: '/security', icon: Shield },
-        { name: 'Settings', href: '/settings', icon: Settings },
+        { name: t('common.dashboard'), href: '/dashboard', icon: LayoutDashboard, roles: ['Super Admin', 'Administrator', 'Instructor', 'Student', 'Staff'] },
+        { name: t('common.courses'), href: '/courses', icon: BookOpen, roles: ['Super Admin', 'Administrator', 'Instructor', 'Student'] },
+        { name: t('common.programs'), href: '/programs', icon: GraduationCap, roles: ['Super Admin', 'Administrator'] },
+        { name: t('common.grades'), href: '/grades', icon: Award, roles: ['Super Admin', 'Administrator', 'Instructor', 'Student'] },
+        { name: t('common.students'), href: '/students', icon: Users, roles: ['Super Admin', 'Administrator', 'Instructor'] },
+        { name: t('common.marketing'), href: '/marketing', icon: Megaphone, roles: ['Super Admin', 'Administrator'] },
+        { name: t('common.finance'), href: '/finance', icon: CreditCard, roles: ['Super Admin', 'Administrator', 'Staff'] },
+        { name: t('common.hr'), href: '/hr', icon: Users, roles: ['Super Admin', 'Administrator', 'Staff'] },
+        { name: t('common.assets'), href: '/assets', icon: Package, roles: ['Super Admin', 'Administrator', 'Staff'] },
+        { name: t('common.analytics'), href: '/analytics', icon: BarChart3, roles: ['Super Admin', 'Administrator'] },
+        { name: 'Collaboration', href: '/collaboration', icon: MessageSquare, roles: ['Super Admin', 'Administrator', 'Instructor', 'Student', 'Staff'] },
+        { name: 'Security Audit', href: '/security', icon: Shield, roles: ['Super Admin'] },
+        { name: 'Settings', href: '/settings', icon: Settings, roles: ['Super Admin'] },
     ];
+
+    // Filtered navigation based on user role
+    // For now, if role is not found or user is null, we default to minimal access
+    const filteredNavigation = navigation.filter(item => {
+        // We assume user object has a role property (e.g., from auth context)
+        // If not, we might need to fetch it or check role_id mapping
+        // For this implementation, we'll check user.role or a simulated role name
+        const userRole = (user as any)?.role?.name || 'Student';
+        return item.roles.includes(userRole) || userRole === 'Super Admin';
+    });
 
     useEffect(() => {
         const activePage = navigation.find(n => n.href === location.pathname);
@@ -43,7 +53,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                     <span>ERP Core</span>
                 </div>
                 <nav className="flex-1 p-4 space-y-1">
-                    {navigation.map((item) => {
+                    {filteredNavigation.map((item) => {
                         const isActive = location.pathname === item.href;
                         return (
                             <Link
@@ -91,7 +101,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                     <div className="flex items-center space-x-4">
                         <div className="text-right mr-4 hidden md:block">
                             <p className="text-sm font-bold text-slate-900">{user?.full_name || 'Administrator'}</p>
-                            <p className="text-xs text-slate-500">System Admin</p>
+                            <p className="text-xs text-indigo-500 font-black uppercase tracking-widest">{(user as any)?.role?.name || 'System User'}</p>
                         </div>
                         <div className="w-10 h-10 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold">
                             {user?.full_name?.charAt(0) || 'A'}

@@ -11,7 +11,8 @@ router = APIRouter()
 @router.get("/student-risk/{student_id}")
 async def get_student_risk(
     student_id: int,
-    db: AsyncSession = Depends(deps.get_db)
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator", "Instructor"]))
 ) -> Any:
     """
     Get AI-driven risk assessment for a specific student.
@@ -21,7 +22,8 @@ async def get_student_risk(
 @router.get("/course-recommendations/{student_id}")
 async def get_course_recommendations(
     student_id: int,
-    db: AsyncSession = Depends(deps.get_db)
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator", "Instructor"]))
 ) -> Any:
     """
     Get AI-driven course recommendations for a student.
@@ -31,7 +33,8 @@ async def get_course_recommendations(
 @router.get("/at-risk-students")
 async def get_at_risk_students(
     db: AsyncSession = Depends(deps.get_db),
-    threshold: int = 40
+    threshold: int = 40,
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator"]))
 ) -> Any:
     """
     Get a list of all students whose risk score is above the threshold.

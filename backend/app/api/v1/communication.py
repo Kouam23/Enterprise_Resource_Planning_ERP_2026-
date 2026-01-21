@@ -29,7 +29,8 @@ async def read_notices(
 async def create_notice(
     *,
     db: AsyncSession = Depends(deps.get_db),
-    notice_in: NoticeCreate
+    notice_in: NoticeCreate,
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator"]))
 ) -> Any:
     obj = Notice(**notice_in.dict())
     db.add(obj)
@@ -133,7 +134,7 @@ async def send_message(
 @router.post("/meeting-link")
 async def create_meeting(
     topic: str,
-    current_user: Any = Depends(deps.get_current_user)
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator", "Instructor"]))
 ) -> Any:
     """
     Generate a simulated third-party meeting link.

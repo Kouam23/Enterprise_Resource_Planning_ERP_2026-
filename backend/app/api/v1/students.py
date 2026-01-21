@@ -14,6 +14,7 @@ async def read_students(
     db: AsyncSession = Depends(deps.get_db),
     skip: int = 0,
     limit: int = 100,
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator", "Instructor", "Staff"]))
 ) -> Any:
     """
     Retrieve students with CGPA.
