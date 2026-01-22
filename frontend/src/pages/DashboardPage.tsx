@@ -1,7 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
+import { AdminDashboard } from '../components/dashboard/AdminDashboard';
+import { InstructorDashboard } from '../components/dashboard/InstructorDashboard';
+import { StudentDashboard } from '../components/dashboard/StudentDashboard';
+import { StaffDashboard } from '../components/dashboard/StaffDashboard';
+import { Sparkles } from 'lucide-react';
 
 interface Stats {
     total_students: number;
@@ -18,11 +23,15 @@ export const DashboardPage: React.FC = () => {
         balance: 0
     });
     const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
+
+    const userRole = (user as any)?.role?.name || 'Student';
+    const userName = (user as any)?.full_name || 'User';
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const response = await axios.get('http://localhost:8000/api/v1/analytics/stats');
+                const response = await api.get('/analytics/stats');
                 setStats(response.data);
             } catch (error) {
                 console.error('Error fetching stats:', error);
@@ -33,71 +42,62 @@ export const DashboardPage: React.FC = () => {
         fetchStats();
     }, []);
 
+    const renderDashboard = () => {
+        switch (userRole) {
+            case 'Super Admin':
+            case 'Administrator':
+                return <AdminDashboard stats={stats} />;
+            case 'Instructor':
+                return <InstructorDashboard stats={stats} />;
+            case 'Staff':
+                return <StaffDashboard stats={stats} />;
+            case 'Student':
+            default:
+                return <StudentDashboard />;
+        }
+    };
+
     return (
         <DashboardLayout>
-            <div className="p-6">
-                <h1 className="text-2xl font-bold text-slate-800 mb-6">Dashboard Overview</h1>
+            <div className="p-8 max-w-[1600px] mx-auto">
+                {/* Dynamic Welcome Header */}
+                <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <div className="flex items-center text-indigo-600 font-black text-xs uppercase tracking-[0.2em] mb-2">
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Empowering Education
+                        </div>
+                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+                            Welcome back, {userName.split(' ')[0]}! 👋
+                        </h1>
+                        <p className="text-slate-500 font-medium mt-1">
+                            Here is what's happening in your {userRole.toLowerCase()} portal today.
+                        </p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                        <div className="text-right hidden sm:block">
+                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Current Session</p>
+                            <p className="text-sm font-bold text-slate-900 leading-none">Spring Semester 2026</p>
+                        </div>
+                        <div className="h-10 w-[1px] bg-slate-200 hidden sm:block mx-4"></div>
+                        <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-xs font-black text-slate-600">
+                            {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </div>
+                    </div>
+                </header>
 
                 {loading ? (
-                    <div className="flex justify-center p-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    <div className="flex flex-col items-center justify-center p-20 space-y-4">
+                        <div className="relative">
+                            <div className="w-12 h-12 rounded-full border-4 border-slate-100 border-t-indigo-600 animate-spin"></div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-2 h-2 bg-indigo-600 rounded-full animate-ping"></div>
+                            </div>
+                        </div>
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest animate-pulse">Synchronizing Intelligence...</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {/* Students Card */}
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <h3 className="text-sm font-medium text-slate-500">Total Students</h3>
-                            <p className="text-2xl font-bold text-slate-900">{stats.total_students.toLocaleString()}</p>
-                        </div>
-
-                        {/* Courses Card */}
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <h3 className="text-sm font-medium text-slate-500">Active Courses</h3>
-                            <p className="text-2xl font-bold text-slate-900">{stats.total_courses.toLocaleString()}</p>
-                        </div>
-
-                        {/* HR Card */}
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <h3 className="text-sm font-medium text-slate-500">Total Staff</h3>
-                            <p className="text-2xl font-bold text-slate-900">{stats.total_employees.toLocaleString()}</p>
-                        </div>
-
-                        {/* Finance Card */}
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <h3 className="text-sm font-medium text-slate-500">Net Balance</h3>
-                            <p className={`text-2xl font-bold ${stats.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                ${stats.balance.toLocaleString()}
-                            </p>
-                        </div>
-                    </div>
+                    renderDashboard()
                 )}
             </div>
         </DashboardLayout>

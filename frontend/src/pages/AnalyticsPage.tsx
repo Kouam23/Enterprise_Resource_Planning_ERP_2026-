@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,13 +19,21 @@ interface Prediction {
 
 export const AnalyticsPage: React.FC = () => {
     const { t } = useTranslation();
+    const { user } = useAuth();
+    const userRole = (user as any)?.role?.name || 'Student';
+    const canAccessAnalytics = ['Super Admin', 'Administrator'].includes(userRole);
+
     const [atRisk, setAtRisk] = useState<Prediction[]>([]);
     const [recommendations, setRecommendations] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (user && canAccessAnalytics) {
+            fetchData();
+        } else {
+            setLoading(false);
+        }
+    }, [user, canAccessAnalytics]);
 
     const fetchData = async () => {
         try {
@@ -40,6 +49,22 @@ export const AnalyticsPage: React.FC = () => {
             setLoading(false);
         }
     };
+
+    if (!canAccessAnalytics) {
+        return (
+            <DashboardLayout>
+                <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-center">
+                    <div className="w-20 h-20 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mb-6">
+                        <BrainCircuit className="w-10 h-10" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Advanced Intelligence Restricted</h1>
+                    <p className="text-slate-500 max-w-md font-medium">
+                        Predictive analytics and student risk profiling are restricted to senior administration for privacy and intervention planning.
+                    </p>
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout>

@@ -9,5 +9,6 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     role_id = Column(Integer, ForeignKey("role.id"))
+    profile_picture_url = Column(String, nullable=True)
 
     role = relationship("Role", back_populates="users")

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 import {
     CreditCard, Calendar, Briefcase,
@@ -50,27 +51,48 @@ interface OKR {
 }
 
 export const HRPage: React.FC = () => {
+    const { user } = useAuth();
+    const userRole = (user as any)?.role?.name || 'Student';
+    const canManageStaff = ['Super Admin', 'Administrator', 'Staff'].includes(userRole);
+
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [payroll, setPayroll] = useState<PayrollRecord[]>([]);
     const [leaves, setLeaves] = useState<LeaveRecord[]>([]);
     const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
     const [okrs, setOkrs] = useState<OKR[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'employees' | 'payroll' | 'leaves' | 'attendance' | 'performance'>('employees');
+    const [activeTab, setActiveTab] = useState<'employees' | 'payroll' | 'leaves' | 'attendance' | 'performance'>('attendance');
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    const tabs = [
+        { id: 'employees', label: 'Employees', roles: ['Super Admin', 'Administrator', 'Staff'] },
+        { id: 'payroll', label: 'Payroll', roles: ['Super Admin', 'Administrator', 'Staff'] },
+        { id: 'leaves', label: 'Leaves', roles: ['Super Admin', 'Administrator', 'Staff'] },
+        { id: 'attendance', label: 'Attendance', roles: ['Super Admin', 'Administrator', 'Staff', 'Instructor', 'Student'] },
+        { id: 'performance', label: 'Performance', roles: ['Super Admin', 'Administrator', 'Staff', 'Instructor', 'Student'] },
+    ];
 
-    const fetchData = async () => {
+    const filteredTabs = tabs.filter(tab => tab.roles.includes(userRole));
+
+    const fetchData = useCallback(async () => {
+        if (!user) return;
+        setLoading(true);
         try {
-            const [eRes, pRes, lRes, aRes, oRes] = await Promise.all([
-                axios.get('http://localhost:8000/api/v1/hr/'),
-                axios.get('http://localhost:8000/api/v1/hr-ext/payroll'),
-                axios.get('http://localhost:8000/api/v1/hr-ext/leave'),
-                axios.get('http://localhost:8000/api/v1/hr-ext/attendance'),
-                axios.get('http://localhost:8000/api/v1/hr-ext/okrs')
-            ]);
+            const requests = [];
+            if (canManageStaff) {
+                requests.push(axios.get('http://localhost:8000/api/v1/hr/'));
+                requests.push(axios.get('http://localhost:8000/api/v1/hr-ext/payroll'));
+                requests.push(axios.get('http://localhost:8000/api/v1/hr-ext/leave'));
+            } else {
+                requests.push(Promise.resolve({ data: [] }));
+                requests.push(Promise.resolve({ data: [] }));
+                requests.push(Promise.resolve({ data: [] }));
+            }
+
+            requests.push(axios.get('http://localhost:8000/api/v1/hr-ext/attendance'));
+            requests.push(axios.get('http://localhost:8000/api/v1/hr-ext/okrs'));
+
+            const [eRes, pRes, lRes, aRes, oRes] = await Promise.all(requests);
+
             setEmployees(eRes.data);
             setPayroll(pRes.data);
             setLeaves(lRes.data);
@@ -81,7 +103,15 @@ export const HRPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, userRole, canManageStaff]);
+
+    useEffect(() => {
+        fetchData();
+        // Reset active tab if it's no longer allowed
+        if (!filteredTabs.find(t => t.id === activeTab)) {
+            setActiveTab(filteredTabs[0]?.id as any || 'attendance');
+        }
+    }, [fetchData, userRole, activeTab, filteredTabs]);
 
     const handleCheckIn = async (empId: number) => {
         try {
@@ -107,14 +137,14 @@ export const HRPage: React.FC = () => {
                         <p className="text-slate-500 font-medium">Manage talent, payroll, biometric attendance, and OKRs.</p>
                     </div>
                     <div className="flex space-x-1 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 overflow-x-auto">
-                        {['employees', 'payroll', 'leaves', 'attendance', 'performance'].map(t => (
+                        {filteredTabs.map(t => (
                             <button
-                                key={t}
-                                onClick={() => setActiveTab(t as any)}
-                                className={`px-4 py-2.5 rounded-xl font-bold transition-all duration-200 capitalize whitespace-nowrap ${activeTab === t ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                                key={t.id}
+                                onClick={() => setActiveTab(t.id as any)}
+                                className={`px-4 py-2.5 rounded-xl font-bold transition-all duration-200 capitalize whitespace-nowrap ${activeTab === t.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
                                     }`}
                             >
-                                {t}
+                                {t.label}
                             </button>
                         ))}
                     </div>
@@ -126,7 +156,7 @@ export const HRPage: React.FC = () => {
                     </div>
                 ) : (
                     <div className="bg-white rounded-[40px] shadow-sm border border-slate-200 overflow-hidden">
-                        {activeTab === 'employees' && (
+                        {activeTab === 'employees' && canManageStaff && (
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50 border-b border-slate-100">
                                     <tr>
@@ -229,10 +259,9 @@ export const HRPage: React.FC = () => {
                             </div>
                         )}
 
-                        {activeTab === 'payroll' && (
+                        {activeTab === 'payroll' && canManageStaff && (
                             <div className="p-8">
                                 <h3 className="text-xl font-black text-slate-800 mb-6">Payroll Cycle</h3>
-                                {/* ... previous payroll code ... */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {payroll.map(p => (
                                         <div key={p.id} className="bg-slate-50 p-6 rounded-[32px] border border-slate-100 flex items-center justify-between">
@@ -257,7 +286,7 @@ export const HRPage: React.FC = () => {
                             </div>
                         )}
 
-                        {activeTab === 'leaves' && (
+                        {activeTab === 'leaves' && canManageStaff && (
                             <div className="p-8">
                                 <h3 className="text-xl font-black text-slate-800 mb-6">Leave Requests</h3>
                                 <div className="space-y-3">

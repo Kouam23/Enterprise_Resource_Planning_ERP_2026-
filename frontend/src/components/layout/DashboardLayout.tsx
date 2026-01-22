@@ -20,9 +20,9 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         { name: t('common.hr'), href: '/hr', icon: Users, roles: ['Super Admin', 'Administrator', 'Staff'] },
         { name: t('common.assets'), href: '/assets', icon: Package, roles: ['Super Admin', 'Administrator', 'Staff'] },
         { name: t('common.analytics'), href: '/analytics', icon: BarChart3, roles: ['Super Admin', 'Administrator'] },
-        { name: 'Collaboration', href: '/collaboration', icon: MessageSquare, roles: ['Super Admin', 'Administrator', 'Instructor', 'Student', 'Staff'] },
-        { name: 'Security Audit', href: '/security', icon: Shield, roles: ['Super Admin'] },
-        { name: 'Settings', href: '/settings', icon: Settings, roles: ['Super Admin'] },
+        { name: t('common.collaboration'), href: '/collaboration', icon: MessageSquare, roles: ['Super Admin', 'Administrator', 'Instructor', 'Student', 'Staff'] },
+        { name: t('common.security_audit'), href: '/security', icon: Shield, roles: ['Super Admin'] },
+        { name: t('common.settings'), href: '/settings', icon: Settings, roles: ['Super Admin'] },
     ];
 
     // Filtered navigation based on user role
@@ -98,15 +98,23 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                     <h2 className="text-xl font-bold text-slate-800">
                         {navigation.find(n => n.href === location.pathname)?.name || 'Welcome'}
                     </h2>
-                    <div className="flex items-center space-x-4">
+                    <Link to="/profile" className="flex items-center space-x-4 hover:bg-slate-50 p-2 rounded-xl transition-colors">
                         <div className="text-right mr-4 hidden md:block">
                             <p className="text-sm font-bold text-slate-900">{user?.full_name || 'Administrator'}</p>
                             <p className="text-xs text-indigo-500 font-black uppercase tracking-widest">{(user as any)?.role?.name || 'System User'}</p>
                         </div>
-                        <div className="w-10 h-10 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold">
-                            {user?.full_name?.charAt(0) || 'A'}
+                        <div className="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold overflow-hidden border-2 border-white shadow-sm">
+                            {user?.profile_picture_url ? (
+                                <img
+                                    src={user.profile_picture_url.startsWith('http') ? user.profile_picture_url : `http://localhost:8000${user.profile_picture_url}`}
+                                    alt="Avatar"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <span>{user?.full_name?.charAt(0) || 'A'}</span>
+                            )}
                         </div>
-                    </div>
+                    </Link>
                 </header>
                 <main className="flex-1 overflow-auto bg-slate-50">
                     {children}

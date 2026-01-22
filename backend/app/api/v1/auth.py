@@ -1,5 +1,6 @@
 from datetime import timedelta
-from typing import Any
+from typing import Any, Optional
+from pydantic import EmailStr
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,6 +46,7 @@ async def register_user(
     """
     Register a new user.
     """
+    from sqlalchemy.orm import selectinload
     user = await crud_user.get_by_email(db, email=user_in.email)
     if user:
         raise HTTPException(
@@ -52,6 +54,8 @@ async def register_user(
             detail="The user with this email already exists in the system.",
         )
     user = await crud_user.create(db, obj_in=user_in)
+    # Refresh user with role relationship loaded
+    await db.refresh(user, ["role"])
     return user
 @router.post("/sso/{provider}")
 async def sso_login(
@@ -71,3 +75,39 @@ async def sso_login(
         "token_type": "bearer",
         "provider": provider
     }
+
+@router.get("/me", response_model=User)
+async def read_users_me(
+    current_user: Any = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Get current user.
+    """
+    return current_user
+
+@router.put("/me", response_model=User)
+async def update_user_me(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    password: Optional[str] = None,
+    full_name: Optional[str] = None,
+    email: Optional[EmailStr] = None,
+    profile_picture_url: Optional[str] = None,
+    current_user: Any = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Update own user.
+    """
+    from app.schemas.user import UserUpdate
+    user_in = UserUpdate()
+    if password is not None:
+        user_in.password = password
+    if full_name is not None:
+        user_in.full_name = full_name
+    if email is not None:
+        user_in.email = email
+    if profile_picture_url is not None:
+        user_in.profile_picture_url = profile_picture_url
+        
+    user = await crud_user.update(db, db_obj=current_user, obj_in=user_in)
+    return user

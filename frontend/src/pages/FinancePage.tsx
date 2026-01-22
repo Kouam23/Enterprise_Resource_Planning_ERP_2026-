@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 import {
     Wallet, Receipt, GraduationCap,
@@ -43,6 +44,10 @@ interface Vendor {
 }
 
 export const FinancePage: React.FC = () => {
+    const { user } = useAuth();
+    const userRole = (user as any)?.role?.name || 'Student';
+    const isFinAdmin = ['Super Admin', 'Administrator', 'Staff'].includes(userRole);
+
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -52,10 +57,14 @@ export const FinancePage: React.FC = () => {
     const [processing, setProcessing] = useState(false);
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (user) fetchData();
+    }, [user]);
 
     const fetchData = async () => {
+        if (!isFinAdmin) {
+            setLoading(false);
+            return;
+        }
         try {
             const [tRes, iRes, eRes, vRes] = await Promise.all([
                 axios.get('http://localhost:8000/api/v1/finance/'),
@@ -75,6 +84,7 @@ export const FinancePage: React.FC = () => {
     };
 
     const handleApplyLateFees = async () => {
+        if (!isFinAdmin) return;
         setProcessing(true);
         try {
             const res = await axios.post('http://localhost:8000/api/v1/finance/apply-late-fees');
@@ -89,6 +99,22 @@ export const FinancePage: React.FC = () => {
 
     const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
     const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+
+    if (!isFinAdmin) {
+        return (
+            <DashboardLayout>
+                <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-center">
+                    <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
+                        <Wallet className="w-10 h-10" />
+                    </div>
+                    <h1 className="text-2xl font-black text-slate-900 mb-2">Access Denied</h1>
+                    <p className="text-slate-500 max-w-md font-medium">
+                        Only authorized personnel can access the financial command center. Please contact your administrator for permissions.
+                    </p>
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout>

@@ -17,9 +17,17 @@ router = APIRouter()
 @router.get("/notices", response_model=List[NoticeSchema])
 async def read_notices(
     db: AsyncSession = Depends(deps.get_db),
-    category: str = None
+    category: str = None,
+    current_user: Any = Depends(deps.get_current_user)
 ) -> Any:
-    query = select(Notice)
+    # Notice logic: Show global notices (target_role_id is NULL) 
+    # OR notices specifically targeted at the user's role.
+    query = select(Notice).where(
+        or_(
+            Notice.target_role_id == None,
+            Notice.target_role_id == current_user.role_id
+        )
+    )
     if category:
         query = query.where(Notice.category == category)
     result = await db.execute(query.order_by(Notice.created_at.desc()))
@@ -32,7 +40,7 @@ async def create_notice(
     notice_in: NoticeCreate,
     current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator"]))
 ) -> Any:
-    obj = Notice(**notice_in.dict())
+    obj = Notice(**notice_in.dict(), author_id=current_user.id)
     db.add(obj)
     await db.commit()
     await db.refresh(obj)
@@ -41,9 +49,12 @@ async def create_notice(
 @router.get("/forum", response_model=List[ForumPostSchema])
 async def read_forum(
     db: AsyncSession = Depends(deps.get_db),
-    topic: str = None
+    topic: str = None,
+    current_user: Any = Depends(deps.get_current_user)
 ) -> Any:
-    query = select(ForumPost)
+    # Forum logic: Every user (role) has their own personalized page
+    # where they can connect and discourse with similar users.
+    query = select(ForumPost).where(ForumPost.target_role_id == current_user.role_id)
     if topic:
         query = query.where(ForumPost.topic == topic)
     result = await db.execute(query.order_by(ForumPost.created_at.desc()))
@@ -53,9 +64,15 @@ async def read_forum(
 async def create_forum_post(
     *,
     db: AsyncSession = Depends(deps.get_db),
-    post_in: ForumPostCreate
+    post_in: ForumPostCreate,
+    current_user: Any = Depends(deps.get_current_user)
 ) -> Any:
-    obj = ForumPost(**post_in.dict())
+    # Auto-assign the target_role_id to the sender's role
+    obj = ForumPost(
+        **post_in.dict(exclude={"target_role_id"}), 
+        author_id=current_user.id,
+        target_role_id=current_user.role_id
+    )
     db.add(obj)
     await db.commit()
     await db.refresh(obj)
@@ -65,9 +82,10 @@ async def create_forum_post(
 async def create_comment(
     *,
     db: AsyncSession = Depends(deps.get_db),
-    comment_in: ForumCommentCreate
+    comment_in: ForumCommentCreate,
+    current_user: Any = Depends(deps.get_current_user)
 ) -> Any:
-    obj = ForumComment(**comment_in.dict())
+    obj = ForumComment(**comment_in.dict(), author_id=current_user.id)
     db.add(obj)
     await db.commit()
     await db.refresh(obj)
@@ -77,11 +95,15 @@ async def create_comment(
 async def read_messages(
     user_id: int,
     other_id: int,
-    db: AsyncSession = Depends(deps.get_db)
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: Any = Depends(deps.get_current_user)
 ) -> Any:
     """
     Get message history between current user and another user.
     """
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+        
     query = select(Message).where(
         or_(
             and_(Message.sender_id == user_id, Message.receiver_id == other_id),
@@ -101,7 +123,7 @@ async def send_message(
     *,
     db: AsyncSession = Depends(deps.get_db),
     message_in: MessageCreate,
-    sender_id: int = 1 # Demo sender
+    current_user: Any = Depends(deps.get_current_user)
 ) -> Any:
     content = message_in.content
     e_hash = None
@@ -113,7 +135,7 @@ async def send_message(
     obj = Message(
         **message_in.dict(exclude={"content"}),
         content=content,
-        sender_id=sender_id,
+        sender_id=current_user.id,
         encryption_hash=e_hash
     )
     db.add(obj)
@@ -121,7 +143,7 @@ async def send_message(
     # Audit log for sensitive communication
     await audit_service.log_action(
         db,
-        user_id=sender_id,
+        user_id=current_user.id,
         action="SEND_MESSAGE",
         target_table="message",
         changes={"is_encrypted": message_in.is_encrypted}

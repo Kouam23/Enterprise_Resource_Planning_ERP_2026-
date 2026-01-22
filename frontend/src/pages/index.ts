@@ -13,3 +13,4 @@ export * from './SecurityDashboard';
 export * from './SettingsPage';
 export * from './FinancePage';
 export * from './HRPage';
+export * from './ProfilePage';

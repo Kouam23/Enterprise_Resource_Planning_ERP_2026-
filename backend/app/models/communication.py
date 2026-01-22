@@ -10,8 +10,10 @@ class Notice(Base):
     category = Column(String, default="General") # General, Academic, Finance, Events
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     author_id = Column(Integer, ForeignKey("user.id"), nullable=True)
+    target_role_id = Column(Integer, ForeignKey("role.id"), nullable=True) # NULL means "All Roles"
 
     author = relationship("User")
+    target_role = relationship("Role")
 
 class ForumPost(Base):
     id = Column(Integer, primary_key=True, index=True)
@@ -20,8 +22,10 @@ class ForumPost(Base):
     topic = Column(String, index=True) # e.g. "Computer Science", "Admissions"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     author_id = Column(Integer, ForeignKey("user.id"), nullable=True)
+    target_role_id = Column(Integer, ForeignKey("role.id"), nullable=True)
     
     author = relationship("User")
+    target_role = relationship("Role")
     comments = relationship("ForumComment", back_populates="post", cascade="all, delete-orphan")
 
 class ForumComment(Base):

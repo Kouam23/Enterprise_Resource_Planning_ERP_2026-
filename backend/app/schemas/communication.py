@@ -6,6 +6,7 @@ class NoticeBase(BaseModel):
     title: str
     content: str
     category: Optional[str] = "General"
+    target_role_id: Optional[int] = None
 
 class NoticeCreate(NoticeBase):
     pass
@@ -35,6 +36,7 @@ class ForumPostBase(BaseModel):
     title: str
     content: str
     topic: Optional[str] = "General"
+    target_role_id: Optional[int] = None
 
 class ForumPostCreate(ForumPostBase):
     pass

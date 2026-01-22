@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
+import { useAuth } from '../context/AuthContext';
 import {
-    Settings, Globe, Calendar,
+    Settings as SettingsIcon, Globe, Calendar,
     Link as LinkIcon, RefreshCw,
     CheckCircle2, AlertCircle,
-    Mail, MessageSquare
+    Mail, MessageSquare, Lock
 } from 'lucide-react';
 import axios from 'axios';
 
 export const SettingsPage: React.FC = () => {
+    const { user } = useAuth();
+    const userRole = (user as any)?.role?.name || 'Student';
+    const isConfigAdmin = ['Super Admin', 'Administrator'].includes(userRole);
+
     const [integrations, setIntegrations] = useState({
         google: false,
         microsoft: false,
@@ -17,6 +22,7 @@ export const SettingsPage: React.FC = () => {
     const [syncing, setSyncing] = useState<string | null>(null);
 
     const handleSync = async (provider: string) => {
+        if (!isConfigAdmin) return;
         setSyncing(provider);
         try {
             await axios.post(`http://localhost:8000/api/v1/analytics/sync-calendar?provider=${provider}`);
@@ -28,12 +34,28 @@ export const SettingsPage: React.FC = () => {
         }
     };
 
+    if (!isConfigAdmin) {
+        return (
+            <DashboardLayout>
+                <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-center">
+                    <div className="w-20 h-20 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-6">
+                        <Lock className="w-10 h-10" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Configuration Restricted</h1>
+                    <p className="text-slate-500 max-w-md font-medium">
+                        System-wide configuration and third-party integrations can only be managed by system administrators.
+                    </p>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
     return (
         <DashboardLayout>
             <div className="p-8 max-w-5xl mx-auto">
                 <div className="mb-12">
                     <div className="flex items-center space-x-2 text-indigo-600 mb-1">
-                        <Settings className="w-5 h-5" />
+                        <SettingsIcon className="w-5 h-5" />
                         <span className="text-xs font-black uppercase tracking-widest">Global Configuration</span>
                     </div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight">System Settings</h1>
@@ -67,8 +89,8 @@ export const SettingsPage: React.FC = () => {
                                     onClick={() => handleSync('google')}
                                     disabled={syncing === 'google'}
                                     className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase transition-all flex items-center space-x-2 ${integrations.google
-                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                                            : 'bg-slate-900 text-white hover:bg-indigo-600'
+                                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                        : 'bg-slate-900 text-white hover:bg-indigo-600'
                                         }`}
                                 >
                                     {syncing === 'google' ? <RefreshCw className="w-4 h-4 animate-spin" /> :
@@ -92,8 +114,8 @@ export const SettingsPage: React.FC = () => {
                                     onClick={() => handleSync('microsoft')}
                                     disabled={syncing === 'microsoft'}
                                     className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase transition-all flex items-center space-x-2 ${integrations.microsoft
-                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                                            : 'bg-slate-900 text-white hover:bg-indigo-600'
+                                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                        : 'bg-slate-900 text-white hover:bg-indigo-600'
                                         }`}
                                 >
                                     {syncing === 'microsoft' ? <RefreshCw className="w-4 h-4 animate-spin" /> :

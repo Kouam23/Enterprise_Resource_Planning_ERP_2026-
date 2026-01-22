@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
+import { GraduationCap } from 'lucide-react';
 
 interface Student {
     id: number;
@@ -13,6 +15,10 @@ interface Student {
 }
 
 export const StudentsPage: React.FC = () => {
+    const { user } = useAuth();
+    const userRole = (user as any)?.role?.name || 'Student';
+    const canManageStudents = ['Super Admin', 'Administrator', 'Instructor'].includes(userRole);
+
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
     const [fullName, setFullName] = useState('');
@@ -23,17 +29,21 @@ export const StudentsPage: React.FC = () => {
     const [showAddForm, setShowAddForm] = useState(false);
 
     useEffect(() => {
-        fetchStudents();
-        fetchPrograms();
-    }, []);
+        if (user && canManageStudents) {
+            fetchStudents();
+            fetchPrograms();
+        } else {
+            setLoading(false);
+        }
+    }, [user, canManageStudents]);
 
     const fetchStudents = async () => {
         try {
             const response = await axios.get('http://localhost:8000/api/v1/students/');
             setStudents(response.data);
-            setLoading(false);
         } catch (error) {
             console.error('Error fetching students:', error);
+        } finally {
             setLoading(false);
         }
     };
@@ -74,17 +84,35 @@ export const StudentsPage: React.FC = () => {
         return program ? program.name : 'Not Assigned';
     };
 
+    if (!canManageStudents) {
+        return (
+            <DashboardLayout>
+                <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-center">
+                    <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-6">
+                        <GraduationCap className="w-10 h-10" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Academic Portal Restricted</h1>
+                    <p className="text-slate-500 max-w-md font-medium">
+                        Academic records and student directories are only accessible to faculty and administrative personnel.
+                    </p>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
     return (
         <DashboardLayout>
             <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-bold text-slate-800">Student Directory</h1>
-                    <button
-                        onClick={() => setShowAddForm(!showAddForm)}
-                        className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition"
-                    >
-                        {showAddForm ? 'Cancel' : '+ Enroll New Student'}
-                    </button>
+                    {canManageStudents && (
+                        <button
+                            onClick={() => setShowAddForm(!showAddForm)}
+                            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition"
+                        >
+                            {showAddForm ? 'Cancel' : '+ Enroll New Student'}
+                        </button>
+                    )}
                 </div>
 
                 {showAddForm && (
@@ -170,7 +198,7 @@ export const StudentsPage: React.FC = () => {
                                 ))}
                                 {students.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-10 text-center text-slate-500 font-medium">No students enrolled yet.</td>
+                                        <td colSpan={6} className="px-6 py-10 text-center text-slate-500 font-medium">No students enrolled yet.</td>
                                     </tr>
                                 )}
                             </tbody>

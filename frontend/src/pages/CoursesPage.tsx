@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 
 interface Course {
@@ -16,6 +17,10 @@ interface Course {
 }
 
 export const CoursesPage: React.FC = () => {
+    const { user } = useAuth();
+    const userRole = (user as any)?.role?.name || 'Student';
+    const canManageCourses = ['Super Admin', 'Administrator', 'Instructor'].includes(userRole);
+
     const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
     const [title, setTitle] = useState('');
@@ -31,8 +36,8 @@ export const CoursesPage: React.FC = () => {
     const [showAddForm, setShowAddForm] = useState(false);
 
     useEffect(() => {
-        fetchCourses();
-    }, []);
+        if (user) fetchCourses();
+    }, [user]);
 
     const fetchCourses = async () => {
         try {
@@ -47,6 +52,7 @@ export const CoursesPage: React.FC = () => {
 
     const handleAddCourse = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!canManageCourses) return;
         try {
             await axios.post('http://localhost:8000/api/v1/courses/', {
                 title,
@@ -81,16 +87,18 @@ export const CoursesPage: React.FC = () => {
         <DashboardLayout>
             <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold text-slate-800">Courses Management</h1>
-                    <button
-                        onClick={() => setShowAddForm(!showAddForm)}
-                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
-                    >
-                        {showAddForm ? 'Cancel' : '+ Add New Course'}
-                    </button>
+                    <h1 className="text-2xl font-bold text-slate-800">Courses Directory</h1>
+                    {canManageCourses && (
+                        <button
+                            onClick={() => setShowAddForm(!showAddForm)}
+                            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+                        >
+                            {showAddForm ? 'Cancel' : '+ Add New Course'}
+                        </button>
+                    )}
                 </div>
 
-                {showAddForm && (
+                {showAddForm && canManageCourses && (
                     <div className="bg-white p-6 rounded-xl shadow-md mb-8 border border-slate-200">
                         <h2 className="text-xl font-bold mb-4 text-slate-800">New Course Details</h2>
                         <form onSubmit={handleAddCourse} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -198,7 +206,7 @@ export const CoursesPage: React.FC = () => {
                                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Prereqs</th>
                                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Credits</th>
                                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                                    {canManageCourses && <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200">
@@ -215,10 +223,12 @@ export const CoursesPage: React.FC = () => {
                                                 {course.is_mandatory ? 'Mandatory' : 'Elective'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <button className="text-indigo-600 hover:text-indigo-900 mr-3 font-medium">Edit</button>
-                                            <button className="text-red-600 hover:text-red-900 font-medium">Delete</button>
-                                        </td>
+                                        {canManageCourses && (
+                                            <td className="px-6 py-4">
+                                                <button className="text-indigo-600 hover:text-indigo-900 mr-3 font-medium">Edit</button>
+                                                <button className="text-red-600 hover:text-red-900 font-medium">Delete</button>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                                 {courses.length === 0 && (

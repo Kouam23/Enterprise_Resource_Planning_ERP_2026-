@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Link, useNavigate } from 'react-router-dom';
 
 export const RegisterPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
-    const [roleId, setRoleId] = useState(4); // Default to student
+    const [roleName, setRoleName] = useState('Student'); // Default to Student
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
@@ -14,12 +14,12 @@ export const RegisterPage: React.FC = () => {
         console.log('Registration attempt started...');
         e.preventDefault();
         try {
-            console.log('Sending data to backend:', { email, fullName, roleId });
-            const response = await axios.post('http://localhost:8000/api/v1/auth/register', {
+            console.log('Sending data to backend:', { email, fullName, roleName });
+            const response = await api.post('/auth/register', {
                 email,
                 password,
                 full_name: fullName,
-                role_id: roleId,
+                role_name: roleName,
                 is_active: true
             });
             console.log('Registration successful!', response.data);
@@ -64,12 +64,15 @@ export const RegisterPage: React.FC = () => {
                     <div className="mb-4">
                         <label className="block text-gray-700 text-sm font-bold mb-2">Role</label>
                         <select
-                            value={roleId}
-                            onChange={(e) => setRoleId(Number(e.target.value))}
+                            value={roleName}
+                            onChange={(e) => setRoleName(e.target.value)}
                             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                            <option value={3}>Teacher</option>
-                            <option value={4}>Student</option>
+                            <option value="Super Admin">Super Admin</option>
+                            <option value="Administrator">Administrator</option>
+                            <option value="Instructor">Instructor</option>
+                            <option value="Student">Student</option>
+                            <option value="Staff">Staff</option>
                         </select>
                     </div>
                     <div className="mb-6">

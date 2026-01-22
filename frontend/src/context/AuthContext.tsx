@@ -1,10 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
+
+interface Role {
+    name: string;
+    permissions: Record<string, any>;
+}
 
 interface User {
+    id: number;
     email: string;
     full_name: string;
     role_id: number;
+    profile_picture_url?: string;
+    role?: Role;
 }
 
 interface AuthContextType {
@@ -12,6 +20,7 @@ interface AuthContextType {
     token: string | null;
     login: (token: string) => void;
     logout: () => void;
+    refreshUser: () => Promise<void>;
     isAuthenticated: boolean;
 }
 
@@ -22,13 +31,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
 
     useEffect(() => {
-        if (token) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            // TODO: Fetch user profile here
-        } else {
-            delete axios.defaults.headers.common['Authorization'];
-        }
+        const fetchUserProfile = async () => {
+            if (token) {
+                try {
+                    const response = await api.get('/auth/me');
+                    setUser(response.data);
+                } catch (error) {
+                    console.error('Failed to fetch user profile', error);
+                }
+            } else {
+                setUser(null);
+            }
+        };
+
+        fetchUserProfile();
     }, [token]);
+
+    const refreshUser = async () => {
+        if (token) {
+            try {
+                const response = await api.get('/auth/me');
+                setUser(response.data);
+            } catch (error) {
+                console.error('Failed to refresh user profile', error);
+            }
+        }
+    };
 
     const login = (newToken: string) => {
         localStorage.setItem('token', newToken);
@@ -42,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token }}>
+        <AuthContext.Provider value={{ user, token, login, logout, refreshUser, isAuthenticated: !!token }}>
             {children}
         </AuthContext.Provider>
     );

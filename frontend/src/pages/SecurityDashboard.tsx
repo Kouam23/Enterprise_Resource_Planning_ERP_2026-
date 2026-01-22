@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 import {
     Shield, Lock, Eye, Clock,
@@ -18,12 +19,20 @@ interface AuditLog {
 }
 
 export const SecurityDashboard: React.FC = () => {
+    const { user } = useAuth();
+    const userRole = (user as any)?.role?.name || 'Student';
+    const isSuperAdmin = userRole === 'Super Admin';
+
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchLogs();
-    }, []);
+        if (user && isSuperAdmin) {
+            fetchLogs();
+        } else {
+            setLoading(false);
+        }
+    }, [user, isSuperAdmin]);
 
     const fetchLogs = async () => {
         try {
@@ -35,6 +44,22 @@ export const SecurityDashboard: React.FC = () => {
             setLoading(false);
         }
     };
+
+    if (!isSuperAdmin) {
+        return (
+            <DashboardLayout>
+                <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-center">
+                    <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6">
+                        <Lock className="w-10 h-10" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Restricted Access</h1>
+                    <p className="text-slate-500 max-w-md font-medium">
+                        The System Audit Hub is strictly reserved for Super Administrators only. This area contains sensitive security logs.
+                    </p>
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout>
@@ -86,8 +111,8 @@ export const SecurityDashboard: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border uppercase ${log.action === 'DELETE' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                                                        log.action === 'CREATE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                            'bg-blue-50 text-blue-600 border-blue-100'
+                                                    log.action === 'CREATE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                        'bg-blue-50 text-blue-600 border-blue-100'
                                                     }`}>
                                                     {log.action}
                                                 </span>

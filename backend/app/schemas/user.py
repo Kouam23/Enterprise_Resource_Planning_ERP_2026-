@@ -7,11 +7,13 @@ class UserBase(BaseModel):
     is_active: Optional[bool] = True
     full_name: Optional[str] = None
     role_id: Optional[int] = None
+    profile_picture_url: Optional[str] = None
 
 # Properties to receive via API on creation
 class UserCreate(UserBase):
     email: EmailStr
     password: str
+    role_name: Optional[str] = None
 
 # Properties to receive via API on update
 class UserUpdate(UserBase):
@@ -23,9 +25,11 @@ class UserInDBBase(UserBase):
     class Config:
         from_attributes = True
 
+from .role import Role
+
 # Additional properties to return via API
 class User(UserInDBBase):
-    pass
+    role: Optional[Role] = None
 
 # Additional properties stored in DB
 class UserInDB(UserInDBBase):

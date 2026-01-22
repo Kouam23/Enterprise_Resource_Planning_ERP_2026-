@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 
 export const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -12,17 +12,35 @@ export const LoginPage: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        try {
-            const formData = new FormData();
-            formData.append('username', email);
-            formData.append('password', password);
+        setError('');
+        console.log('Login attempt started for:', email);
 
-            const response = await axios.post('http://localhost:8000/api/v1/auth/login', formData);
-            login(response.data.access_token);
-            navigate('/dashboard');
-        } catch (err) {
-            setError('Invalid credentials');
-            console.error(err);
+        try {
+            const params = new URLSearchParams();
+            params.append('username', email);
+            params.append('password', password);
+
+            console.log('Sending request to: /auth/login');
+            const response = await api.post('/auth/login', params, {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
+
+            console.log('Login response received:', response.status);
+
+            if (response.data.access_token) {
+                console.log('Token received, logging in...');
+                login(response.data.access_token);
+                console.log('Redirecting to dashboard...');
+                navigate('/dashboard');
+            } else {
+                console.error('No access token in response:', response.data);
+                setError('Authentication failed: No token received');
+            }
+        } catch (err: any) {
+            console.error('Login error details:', err.response?.data || err.message);
+            setError(err.response?.data?.detail || 'Invalid credentials or server unreachable');
         }
     };
 

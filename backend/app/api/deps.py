@@ -31,7 +31,12 @@ async def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
-    user = await crud_user.get(db, id=token_data.sub)
+    from sqlalchemy.orm import selectinload
+    from sqlalchemy import select
+    result = await db.execute(
+        select(User).where(User.id == token_data.sub).options(selectinload(User.role))
+    )
+    user = result.scalars().first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if not user.is_active:

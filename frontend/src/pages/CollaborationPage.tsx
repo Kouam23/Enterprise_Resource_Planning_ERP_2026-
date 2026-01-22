@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
+import { useAuth } from '../context/AuthContext';
 import {
     MessageSquare, Send, User,
     Calendar, Megaphone, Plus, Hash,
-    Video, Lock
+    Video, Lock, ShieldCheck, Users
 } from 'lucide-react';
 
 interface Notice {
@@ -25,6 +26,15 @@ interface ForumPost {
 }
 
 export const CollaborationPage: React.FC = () => {
+    const { user } = useAuth();
+    const userRole = (user as any)?.role?.name || 'Student';
+    const isStudent = userRole === 'Student';
+
+    // Personalize hub names
+    const hubName = isStudent ? 'Student Community Hub' :
+        userRole === 'Instructor' ? 'Instructor Lounge' :
+            userRole === 'Staff' ? 'Operations Center' : 'Admin Command Hub';
+
     const [notices, setNotices] = useState<Notice[]>([]);
     const [posts, setPosts] = useState<ForumPost[]>([]);
     const [activeTab, setActiveTab] = useState<'notices' | 'forum' | 'messages'>('notices');
@@ -36,16 +46,16 @@ export const CollaborationPage: React.FC = () => {
 
     useEffect(() => {
         fetchData();
-        if (activeTab === 'messages') {
+        if (activeTab === 'messages' && user?.id) {
             fetchMessages();
         }
-    }, [activeTab]);
+    }, [activeTab, user?.id]);
 
     const fetchData = async () => {
         try {
             const [nRes, pRes] = await Promise.all([
-                axios.get('http://localhost:8000/api/v1/communication/notices'),
-                axios.get('http://localhost:8000/api/v1/communication/forum')
+                api.get('/communication/notices'),
+                api.get('/communication/forum')
             ]);
             setNotices(nRes.data);
             setPosts(pRes.data);
@@ -57,9 +67,10 @@ export const CollaborationPage: React.FC = () => {
     };
 
     const fetchMessages = async () => {
+        if (!user?.id) return;
         try {
-            // Simulated user IDs for demo
-            const res = await axios.get('http://localhost:8000/api/v1/communication/messages/1?other_id=2');
+            // Demo fallback for message history
+            const res = await api.get(`/communication/messages/${user.id}?other_id=${user.id === 1 ? 2 : 1}`);
             setMessages(res.data);
         } catch (error) {
             console.error('Error fetching messages:', error);
@@ -67,11 +78,10 @@ export const CollaborationPage: React.FC = () => {
     };
 
     const handleSendMessage = async () => {
-        if (!newMessage.trim()) return;
+        if (!newMessage.trim() || !user?.id) return;
         try {
-            await axios.post('http://localhost:8000/api/v1/communication/messages', {
-                sender_id: 1,
-                receiver_id: 2,
+            await api.post('/communication/messages', {
+                receiver_id: user.id === 1 ? 2 : 1,
                 content: newMessage,
                 is_encrypted: isEncrypted
             });
@@ -84,7 +94,7 @@ export const CollaborationPage: React.FC = () => {
 
     const handleGenerateMeeting = async () => {
         try {
-            const res = await axios.post('http://localhost:8000/api/v1/communication/meeting-link?topic=General Discussion');
+            const res = await api.post(`/communication/meeting-link?topic=${hubName} Live Group Session`);
             setMeetingLink(res.data);
         } catch (error) {
             console.error('Error generating meeting link:', error);
@@ -93,187 +103,221 @@ export const CollaborationPage: React.FC = () => {
 
     return (
         <DashboardLayout>
-            <div className="p-8 max-w-7xl mx-auto">
-                <div className="flex justify-between items-end mb-8">
+            <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-500">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Collaboration Hub</h1>
-                        <p className="text-slate-500 font-medium">Institutional updates and academic community forums.</p>
+                        <div className="flex items-center text-indigo-600 font-black text-xs uppercase tracking-widest mb-2">
+                            <ShieldCheck className="w-4 h-4 mr-2" />
+                            Verified Professional Space
+                        </div>
+                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter">{hubName}</h1>
+                        <p className="text-slate-500 font-medium">Connect and collaborate with matched {userRole.toLowerCase()} peers.</p>
                     </div>
-                    <div className="flex space-x-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
-                        {['notices', 'forum', 'messages'].map(t => (
+                    <div className="flex space-x-1 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 w-full md:w-auto overflow-x-auto">
+                        {[
+                            { id: 'notices', label: 'Bulletin', icon: Megaphone },
+                            { id: 'forum', label: 'Community Forum', icon: MessageSquare },
+                            { id: 'messages', label: 'Direct Messages', icon: Send }
+                        ].map(t => (
                             <button
-                                key={t}
-                                onClick={() => setActiveTab(t as any)}
-                                className={`px-6 py-2.5 rounded-xl font-bold transition-all duration-200 capitalize ${activeTab === t ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                key={t.id}
+                                onClick={() => setActiveTab(t.id as any)}
+                                className={`flex items-center px-6 py-2.5 rounded-xl font-bold transition-all duration-200 whitespace-nowrap ${activeTab === t.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                                     }`}
                             >
-                                {t}
+                                <t.icon className="w-4 h-4 mr-2" />
+                                {t.label}
                             </button>
                         ))}
                     </div>
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center p-24">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                    <div className="flex items-center justify-center p-24 bg-white rounded-[40px] border border-slate-100">
+                        <div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin"></div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-8">
+                    <div className="grid grid-cols-1 gap-8 animate-in slide-in-from-bottom-4 duration-700">
                         {activeTab === 'notices' && (
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-xl font-black text-slate-800 flex items-center">
-                                        <Megaphone className="w-6 h-6 mr-2 text-indigo-500" /> Official Notices
+                                    <h3 className="text-2xl font-black text-slate-800 flex items-center tracking-tight">
+                                        <Megaphone className="w-7 h-7 mr-3 text-indigo-500" /> Professional Bulletin
                                     </h3>
-                                    <button className="bg-slate-900 text-white px-5 py-2 rounded-xl text-xs font-black uppercase flex items-center">
-                                        <Plus className="w-4 h-4 mr-2" /> Post Notice
-                                    </button>
+                                    {(userRole === 'Super Admin' || userRole === 'Administrator') && (
+                                        <button className="bg-slate-900 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase flex items-center hover:scale-[1.02] transition-transform shadow-lg shadow-slate-200">
+                                            <Plus className="w-4 h-4 mr-2" /> Post Announcement
+                                        </button>
+                                    )}
                                 </div>
-                                {notices.map(notice => (
-                                    <div key={notice.id} className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm hover:border-indigo-200 transition-colors group">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border border-indigo-100">
-                                                {notice.category}
-                                            </span>
-                                            <span className="text-slate-400 text-xs font-medium flex items-center">
-                                                <Calendar className="w-3.5 h-3.5 mr-1" /> {new Date(notice.created_at).toLocaleDateString()}
-                                            </span>
+                                <div className="grid gap-6">
+                                    {notices.map(notice => (
+                                        <div key={notice.id} className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all group">
+                                            <div className="flex justify-between items-start mb-6">
+                                                <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase px-3 py-1 rounded-full border border-indigo-100">
+                                                    {notice.category}
+                                                </span>
+                                                <span className="text-slate-400 text-xs font-bold flex items-center">
+                                                    <Calendar className="w-3.5 h-3.5 mr-2" /> {new Date(notice.created_at).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            <h4 className="text-2xl font-black text-slate-900 mb-3 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{notice.title}</h4>
+                                            <p className="text-slate-500 font-medium leading-relaxed text-lg">{notice.content}</p>
                                         </div>
-                                        <h4 className="text-xl font-black text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">{notice.title}</h4>
-                                        <p className="text-slate-500 font-medium leading-relaxed">{notice.content}</p>
-                                    </div>
-                                ))}
-                                {notices.length === 0 && <p className="text-center py-12 text-slate-400 italic font-bold">No official notices posted yet.</p>}
+                                    ))}
+                                    {notices.length === 0 && (
+                                        <div className="p-20 text-center bg-slate-50/50 rounded-[40px] border-2 border-dashed border-slate-200">
+                                            <Megaphone className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                                            <p className="text-slate-400 font-bold">No announcements for your community cycle yet.</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
 
                         {activeTab === 'forum' && (
-                            <div className="space-y-6">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-xl font-black text-slate-800 flex items-center">
-                                        <MessageSquare className="w-6 h-6 mr-2 text-emerald-500" /> Academic Forum
+                            <div className="space-y-8">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="text-2xl font-black text-slate-800 flex items-center tracking-tight">
+                                        <Users className="w-7 h-7 mr-3 text-indigo-500" /> {userRole} Community Forum
                                     </h3>
-                                    <button className="bg-emerald-600 text-white px-5 py-2 rounded-xl text-xs font-black uppercase flex items-center">
-                                        <Send className="w-4 h-4 mr-2" /> Start Discussion
+                                    <button className="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase flex items-center hover:scale-[1.02] transition-transform shadow-lg shadow-indigo-100">
+                                        <Send className="w-4 h-4 mr-2" /> Discourse with Peers
                                     </button>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {posts.map(post => (
-                                        <div key={post.id} className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm flex flex-col justify-between">
-                                            <div>
-                                                <div className="flex items-center space-x-2 mb-4">
-                                                    <Hash className="w-4 h-4 text-emerald-500" />
-                                                    <span className="text-xs font-black text-emerald-600 uppercase tracking-widest">{post.topic}</span>
+                                        <div key={post.id} className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+                                            <div className="space-y-4">
+                                                <div className="flex items-center space-x-2">
+                                                    <div className="p-1.5 bg-indigo-50 rounded-lg">
+                                                        <Hash className="w-4 h-4 text-indigo-500" />
+                                                    </div>
+                                                    <span className="text-xs font-black text-indigo-500 uppercase tracking-widest">{post.topic}</span>
                                                 </div>
-                                                <h4 className="text-lg font-black text-slate-900 mb-2">{post.title}</h4>
-                                                <p className="text-slate-500 text-sm font-medium line-clamp-2">{post.content}</p>
+                                                <h4 className="text-xl font-black text-slate-900 leading-tight">"{post.title}"</h4>
+                                                <p className="text-slate-500 text-sm font-medium line-clamp-3 leading-relaxed">{post.content}</p>
                                             </div>
                                             <div className="mt-8 pt-6 border-t border-slate-50 flex justify-between items-center">
-                                                <div className="flex items-center space-x-2">
-                                                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-                                                        <User className="w-4 h-4" />
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer">
+                                                        <User className="w-5 h-5" />
                                                     </div>
-                                                    <span className="text-xs font-bold text-slate-600">Anonymous</span>
+                                                    <div>
+                                                        <p className="text-xs font-black text-slate-700">Anonymous {userRole}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400">{new Date(post.created_at).toLocaleDateString()}</p>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center space-x-1 text-slate-400">
-                                                    <MessageSquare className="w-4 h-4" />
+                                                <div className="flex items-center space-x-1.5 bg-slate-50 px-3 py-1.5 rounded-full text-slate-400">
+                                                    <MessageSquare className="w-3.5 h-3.5" />
                                                     <span className="text-xs font-black">{post.comments?.length || 0}</span>
                                                 </div>
                                             </div>
                                         </div>
                                     ))}
+                                    {posts.length === 0 && (
+                                        <div className="col-span-full p-20 text-center bg-slate-50/50 rounded-[40px] border-2 border-dashed border-slate-200">
+                                            <MessageSquare className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                                            <p className="text-slate-400 font-bold italic">The {userRole.toLowerCase()} lounge is quiet. Lead the discourse.</p>
+                                        </div>
+                                    )}
                                 </div>
-                                {posts.length === 0 && <p className="text-center py-12 text-slate-400 italic font-bold">The forum is currently quiet. Start the conversation!</p>}
                             </div>
                         )}
 
                         {activeTab === 'messages' && (
-                            <div className="bg-white rounded-[40px] border border-slate-200 shadow-2xl overflow-hidden flex flex-col h-[600px]">
-                                <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                            <div className="bg-white rounded-[40px] border border-slate-100 shadow-2xl overflow-hidden flex flex-col h-[650px] animate-in slide-in-from-right-4">
+                                <div className="p-8 border-b border-slate-50 bg-slate-50/30 flex flex-col md:flex-row gap-4 justify-between md:items-center">
                                     <div className="flex items-center space-x-4">
-                                        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                                            <User className="w-6 h-6" />
+                                        <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-indigo-100">
+                                            <User className="w-7 h-7" />
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-black text-slate-900">Direct Messages</h3>
-                                            <p className="text-xs font-bold text-indigo-500 uppercase tracking-tighter">Connected to Faculty Support</p>
+                                            <h3 className="text-xl font-black text-slate-900 tracking-tight">Direct Support</h3>
+                                            <div className="flex items-center text-xs font-bold text-indigo-500 uppercase tracking-tight">
+                                                <div className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></div>
+                                                Matched with {isStudent ? 'Academic Advisor' : 'Department Head'}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="flex space-x-2">
-                                        <button
-                                            onClick={handleGenerateMeeting}
-                                            className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-50 transition-all"
-                                        >
-                                            <Video className="w-4 h-4 text-emerald-500" />
-                                            <span>Start Meeting</span>
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={handleGenerateMeeting}
+                                        className="flex items-center justify-center space-x-2 px-6 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black text-slate-600 hover:bg-slate-50 hover:border-emerald-200 hover:text-emerald-600 transition-all shadow-sm active:scale-95"
+                                    >
+                                        <Video className="w-4 h-4 text-emerald-500" />
+                                        <span>Start Zoom Meeting</span>
+                                    </button>
                                 </div>
 
                                 {meetingLink && (
-                                    <div className="mx-6 mt-4 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex justify-between items-center animate-in fade-in slide-in-from-top-4">
-                                        <div>
-                                            <p className="text-xs font-black text-emerald-800 uppercase mb-1">Live Meeting Created</p>
-                                            <a href={meetingLink.link} target="_blank" rel="noreferrer" className="text-sm font-bold text-emerald-600 underline">Join Zoom Session</a>
+                                    <div className="mx-8 mt-6 p-6 bg-emerald-50 border border-emerald-100 rounded-3xl flex justify-between items-center animate-in fade-in slide-in-from-top-4">
+                                        <div className="flex items-center">
+                                            <div className="p-3 bg-white rounded-2xl mr-4 shadow-sm">
+                                                <Video className="w-6 h-6 text-emerald-500" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] mb-1">Live Professional Meeting</p>
+                                                <a href={meetingLink.link} target="_blank" rel="noreferrer" className="text-lg font-black text-emerald-600 hover:underline">Click to Join Session →</a>
+                                            </div>
                                         </div>
-                                        <button onClick={() => setMeetingLink(null)} className="text-emerald-400 hover:text-emerald-600">
-                                            <Plus className="w-4 h-4 rotate-45" />
+                                        <button onClick={() => setMeetingLink(null)} className="p-2 text-emerald-400 hover:text-emerald-100 hover:bg-emerald-600 rounded-xl transition-all">
+                                            <XIcon className="w-5 h-5" />
                                         </button>
                                     </div>
                                 )}
 
-                                <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                                <div className="flex-1 overflow-y-auto p-10 space-y-8 scrollbar-hide">
                                     {messages.map((m: any) => (
-                                        <div key={m.id} className={`flex ${m.sender_id === 1 ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[70%] p-5 rounded-[24px] font-medium shadow-sm relative ${m.sender_id === 1
+                                        <div key={m.id} className={`flex ${m.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[75%] p-6 rounded-[32px] font-bold shadow-sm relative leading-relaxed ${m.sender_id === user?.id
                                                 ? 'bg-indigo-600 text-white rounded-tr-none'
-                                                : 'bg-slate-100 text-slate-800 rounded-tl-none'
+                                                : 'bg-slate-50 text-slate-800 rounded-tl-none border border-slate-100'
                                                 }`}>
                                                 {m.is_encrypted && (
-                                                    <div className="flex items-center space-x-1 mb-2 text-[10px] font-black uppercase tracking-widest opacity-60">
-                                                        <Lock className="w-3 h-3" />
-                                                        <span>End-to-End Encrypted</span>
+                                                    <div className="flex items-center space-x-1.5 mb-3 text-[10px] font-black uppercase tracking-widest opacity-60">
+                                                        <Lock className="w-3.5 h-3.5" />
+                                                        <span>E2EE Professional Grade</span>
                                                     </div>
                                                 )}
                                                 {m.content}
-                                                <div className={`text-[10px] mt-2 opacity-50 ${m.sender_id === 1 ? 'text-right' : 'text-left'}`}>
+                                                <div className={`text-[10px] mt-4 font-black uppercase tracking-widest opacity-40 ${m.sender_id === user?.id ? 'text-right' : 'text-left'}`}>
                                                     {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                             </div>
                                         </div>
                                     ))}
                                     {messages.length === 0 && (
-                                        <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
-                                            <MessageSquare className="w-12 h-12 opacity-20" />
-                                            <p className="font-black italic">Start a new conversation...</p>
+                                        <div className="flex flex-col items-center justify-center h-full text-slate-200">
+                                            <MessageSquare className="w-20 h-20 opacity-10 mb-6" />
+                                            <p className="font-black text-slate-300 italic">Initiate encrypted discourse...</p>
                                         </div>
                                     )}
                                 </div>
-                                <div className="p-6 border-t border-slate-100 bg-white">
-                                    <div className="flex space-x-3 items-center mb-4">
+                                <div className="p-8 border-t border-slate-50 bg-white">
+                                    <div className="flex space-x-4 items-center mb-6">
                                         <button
                                             onClick={() => setIsEncrypted(!isEncrypted)}
-                                            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${isEncrypted ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400'
+                                            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${isEncrypted ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' : 'bg-white border-slate-100 text-slate-400'
                                                 }`}
                                         >
-                                            <Lock className={`w-3 h-3 ${isEncrypted ? 'text-indigo-600' : 'text-slate-400'}`} />
-                                            <span>Encryption: {isEncrypted ? 'ON' : 'OFF'}</span>
+                                            <Lock className={`w-3.5 h-3.5 ${isEncrypted ? 'text-indigo-600' : 'text-slate-300'}`} />
+                                            <span>Encryption: {isEncrypted ? 'Secured' : 'Safety Off'}</span>
                                         </button>
                                     </div>
-                                    <div className="flex space-x-3 items-center bg-slate-50 p-2 rounded-2xl border border-slate-100">
+                                    <div className="flex space-x-4 items-center bg-slate-50 p-2.5 rounded-[28px] border border-slate-100 focus-within:ring-4 focus-within:ring-indigo-100 transition-all">
                                         <input
                                             type="text"
                                             value={newMessage}
                                             onChange={(e) => setNewMessage(e.target.value)}
                                             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                                            placeholder="Type a message..."
-                                            className="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 font-bold placeholder:text-slate-400 px-4"
+                                            placeholder="Type message..."
+                                            className="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 font-bold placeholder:text-slate-300 px-6 text-lg"
                                         />
                                         <button
                                             onClick={handleSendMessage}
-                                            className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-slate-900 transition-colors shadow-lg"
+                                            className="bg-indigo-600 text-white p-4 rounded-[20px] hover:bg-slate-900 transition-all shadow-xl shadow-indigo-100 active:scale-95"
                                         >
-                                            <Send className="w-5 h-5" />
+                                            <Send className="w-6 h-6" />
                                         </button>
                                     </div>
                                 </div>
@@ -285,3 +329,8 @@ export const CollaborationPage: React.FC = () => {
         </DashboardLayout>
     );
 };
+
+// Helper for X icon since Lucide sometimes uses different names or to avoid missing import
+const XIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+);

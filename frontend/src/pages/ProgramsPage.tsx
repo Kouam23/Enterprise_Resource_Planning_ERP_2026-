@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
+import { GraduationCap } from 'lucide-react';
 
 interface Program {
     id: number;
@@ -12,6 +14,10 @@ interface Program {
 }
 
 export const ProgramsPage: React.FC = () => {
+    const { user } = useAuth();
+    const userRole = (user as any)?.role?.name || 'Student';
+    const canManagePrograms = ['Super Admin', 'Administrator'].includes(userRole);
+
     const [programs, setPrograms] = useState<Program[]>([]);
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState('');
@@ -21,22 +27,27 @@ export const ProgramsPage: React.FC = () => {
     const [showAddForm, setShowAddForm] = useState(false);
 
     useEffect(() => {
-        fetchPrograms();
-    }, []);
+        if (user && canManagePrograms) {
+            fetchPrograms();
+        } else {
+            setLoading(false);
+        }
+    }, [user, canManagePrograms]);
 
     const fetchPrograms = async () => {
         try {
             const response = await axios.get('http://localhost:8000/api/v1/programs/');
             setPrograms(response.data);
-            setLoading(false);
         } catch (error) {
             console.error('Error fetching programs:', error);
+        } finally {
             setLoading(false);
         }
     };
 
     const handleAddProgram = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!canManagePrograms) return;
         try {
             await axios.post('http://localhost:8000/api/v1/programs/', {
                 name,
@@ -57,6 +68,7 @@ export const ProgramsPage: React.FC = () => {
     };
 
     const handleDelete = async (id: number) => {
+        if (!canManagePrograms) return;
         if (window.confirm('Are you sure you want to delete this program?')) {
             try {
                 await axios.delete(`http://localhost:8000/api/v1/programs/${id}`);
@@ -67,20 +79,38 @@ export const ProgramsPage: React.FC = () => {
         }
     };
 
+    if (!canManagePrograms) {
+        return (
+            <DashboardLayout>
+                <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-center">
+                    <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-6">
+                        <GraduationCap className="w-10 h-10" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Institutional Admin Only</h1>
+                    <p className="text-slate-500 max-w-md font-medium">
+                        Program structures and curriculum versions are managed exclusively by institutional administrators.
+                    </p>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
     return (
         <DashboardLayout>
             <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold text-gray-800">Academic Programs</h1>
-                    <button
-                        onClick={() => setShowAddForm(!showAddForm)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                    >
-                        {showAddForm ? 'Cancel' : 'Add Program'}
-                    </button>
+                    {canManagePrograms && (
+                        <button
+                            onClick={() => setShowAddForm(!showAddForm)}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                        >
+                            {showAddForm ? 'Cancel' : 'Add Program'}
+                        </button>
+                    )}
                 </div>
 
-                {showAddForm && (
+                {showAddForm && canManagePrograms && (
                     <div className="bg-white p-6 rounded-lg shadow-md mb-8 border border-gray-100">
                         <h2 className="text-xl font-semibold mb-4 text-gray-700">New Program Details</h2>
                         <form onSubmit={handleAddProgram} className="grid grid-cols-1 md:grid-cols-2 gap-4">
