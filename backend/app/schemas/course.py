@@ -29,10 +29,15 @@ class CourseInDBBase(CourseBase):
     class Config:
         from_attributes = True
 
+# Simplified schema for list responses (no relationships)
+class CourseList(CourseInDBBase):
+    """Course schema for list endpoints - excludes relationships to avoid lazy loading"""
+    pass
+
 # Additional properties to return via API
 class Course(CourseInDBBase):
-    prerequisites: List["Course"] = []
-    co_requisites: List["Course"] = []
+    prerequisites: Optional[List["Course"]] = None
+    co_requisites: Optional[List["Course"]] = None
 
 # Additional properties stored in DB
 class CourseInDB(CourseInDBBase):

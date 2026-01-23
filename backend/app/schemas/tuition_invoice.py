@@ -12,7 +12,7 @@ class TuitionInvoiceBase(BaseModel):
 
 class TuitionInvoiceCreate(TuitionInvoiceBase):
     student_id: int
-    fee_structure_id: int
+    fee_structure_id: Optional[int] = None
     amount_due: float
 
 class TuitionInvoiceUpdate(TuitionInvoiceBase):

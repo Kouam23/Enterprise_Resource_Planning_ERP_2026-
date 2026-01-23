@@ -58,12 +58,13 @@ class FinanceService:
         elif invoice.amount_paid > 0:
             invoice.status = "partial"
             
-        transaction_data = {
-            "description": f"Tuition Payment - Invoice #{invoice.id}",
-            "amount": amount,
-            "type": "income",
-            "category": "tuition"
-        }
+        from app.schemas.transaction import TransactionCreate
+        transaction_data = TransactionCreate(
+            description=f"Tuition Payment - Invoice #{invoice.id}",
+            amount=amount,
+            type="income",
+            category="tuition"
+        )
         await crud_transaction.create(db, obj_in=transaction_data)
         
         await db.commit()

@@ -6,7 +6,7 @@ from app.db.base_class import Base
 class TuitionInvoice(Base):
     id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("student.id"), nullable=False)
-    fee_structure_id = Column(Integer, ForeignKey("feestructure.id"), nullable=False)
+    fee_structure_id = Column(Integer, ForeignKey("feestructure.id"), nullable=True)
     amount_due = Column(Float, nullable=False)
     amount_paid = Column(Float, default=0.0)
     late_fee_accumulated = Column(Float, default=0.0)

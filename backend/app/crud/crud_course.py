@@ -1,11 +1,23 @@
 from typing import Any, Dict, Optional, Union, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.crud.base import CRUDBase
 from app.models.course import Course
 from app.schemas.course import CourseCreate, CourseUpdate
 
 class CRUDCourse(CRUDBase[Course, CourseCreate, CourseUpdate]):
+    async def get_multi(
+        self, db: AsyncSession, *, skip: int = 0, limit: int = 100
+    ) -> List[Course]:
+        """
+        Override to prevent lazy loading of prerequisites and co_requisites
+        which causes MissingGreenlet errors.
+        """
+        stmt = select(Course).offset(skip).limit(limit)
+        result = await db.execute(stmt)
+        return result.scalars().all()
+    
     async def create(self, db: AsyncSession, *, obj_in: CourseCreate) -> Course:
         db_obj = Course(
             title=obj_in.title,

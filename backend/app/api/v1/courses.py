@@ -3,11 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.crud.crud_course import course as crud_course
-from app.schemas.course import Course, CourseCreate, CourseUpdate
+from app.schemas.course import Course, CourseCreate, CourseUpdate, CourseList
 
 router = APIRouter()
 
-@router.get("/", response_model=List[Course])
+@router.get("/", response_model=List[CourseList])
 async def read_courses(
     db: AsyncSession = Depends(deps.get_db),
     skip: int = 0,

@@ -8,6 +8,7 @@ class GradeBase(BaseModel):
     score: Optional[float] = None
     weight: Optional[float] = 1.0
     term: Optional[str] = None
+    is_resit: Optional[bool] = False
 
 # Properties to receive via API on creation
 class GradeCreate(GradeBase):

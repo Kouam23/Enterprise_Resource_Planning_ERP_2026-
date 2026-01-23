@@ -43,6 +43,39 @@ async def get_current_user(
         raise HTTPException(status_code=400, detail="Inactive user")
     return user
 
+async def get_current_user_optional(
+    db: AsyncSession = Depends(get_db),
+    token: Optional[str] = Depends(OAuth2PasswordBearer(
+        tokenUrl=f"{settings.API_V1_STR}/auth/login", 
+        auto_error=False
+    ))
+) -> Optional[User]:
+    """
+    Return User if valid token is provided, else None.
+    Do NOT raise 401/403.
+    """
+    if not token:
+        return None
+        
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
+        )
+        token_data = TokenPayload(**payload)
+    except (jwt.JWTError, ValidationError):
+        return None
+        
+    from sqlalchemy.orm import selectinload
+    from sqlalchemy import select
+    result = await db.execute(
+        select(User).where(User.id == token_data.sub).options(selectinload(User.role))
+    )
+    user = result.scalars().first()
+    if not user or not user.is_active:
+        return None
+        
+    return user
+
 class RoleChecker:
     def __init__(self, allowed_roles: list[str]):
         self.allowed_roles = allowed_roles

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 import {
     Wallet, Receipt, GraduationCap,
-    Plus, Truck
+    Plus, Truck, CreditCard, DollarSign, X
 } from 'lucide-react';
 
 interface Transaction {
@@ -19,11 +19,16 @@ interface Transaction {
 interface Invoice {
     id: number;
     student_id: number;
+    fee_structure_id?: number;
     amount_due: number;
     amount_paid: number;
     late_fee_accumulated: number;
     status: string;
     due_date: string;
+    student?: {
+        full_name: string;
+        matricule?: string;
+    };
 }
 
 interface Expense {
@@ -43,6 +48,12 @@ interface Vendor {
     email: string;
 }
 
+interface Student {
+    id: number;
+    full_name: string;
+    matricule?: string;
+}
+
 export const FinancePage: React.FC = () => {
     const { user } = useAuth();
     const userRole = (user as any)?.role?.name || 'Student';
@@ -52,9 +63,23 @@ export const FinancePage: React.FC = () => {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [vendors, setVendors] = useState<Vendor[]>([]);
+    const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'overview' | 'tuition' | 'expenses' | 'vendors'>('overview');
     const [processing, setProcessing] = useState(false);
+
+    // Modals
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+    // Form Data
+    const [invoiceForm, setInvoiceForm] = useState({
+        student_id: '',
+        amount_due: '',
+        due_date: new Date().toISOString().split('T')[0]
+    });
+    const [paymentAmount, setPaymentAmount] = useState('');
 
     useEffect(() => {
         if (user) fetchData();
@@ -66,16 +91,18 @@ export const FinancePage: React.FC = () => {
             return;
         }
         try {
-            const [tRes, iRes, eRes, vRes] = await Promise.all([
-                axios.get('http://localhost:8000/api/v1/finance/'),
-                axios.get('http://localhost:8000/api/v1/tuition-invoices/'),
-                axios.get('http://localhost:8000/api/v1/expenses/'),
-                axios.get('http://localhost:8000/api/v1/finance-ext/vendors')
+            const [tRes, iRes, eRes, vRes, sRes] = await Promise.all([
+                api.get('/finance/'),
+                api.get('/tuition-invoices/'),
+                api.get('/expenses/'),
+                api.get('/finance-ext/vendors'),
+                api.get('/students/')
             ]);
             setTransactions(tRes.data);
             setInvoices(iRes.data);
             setExpenses(eRes.data);
             setVendors(vRes.data);
+            setStudents(sRes.data);
         } catch (error) {
             console.error('Error fetching finance data:', error);
         } finally {
@@ -83,11 +110,52 @@ export const FinancePage: React.FC = () => {
         }
     };
 
+    const handleCreateInvoice = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setProcessing(true);
+        try {
+            await api.post('/tuition-invoices/', {
+                student_id: parseInt(invoiceForm.student_id),
+                amount_due: parseFloat(invoiceForm.amount_due),
+                due_date: invoiceForm.due_date,
+                status: 'unpaid'
+            });
+            setShowInvoiceModal(false);
+            setInvoiceForm({ student_id: '', amount_due: '', due_date: new Date().toISOString().split('T')[0] });
+            fetchData();
+        } catch (error) {
+            console.error('Error creating invoice:', error);
+            alert('Failed to create invoice');
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handleRecordPayment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedInvoice) return;
+        setProcessing(true);
+        try {
+            await api.post(`/tuition-invoices/${selectedInvoice.id}/pay`, null, {
+                params: { amount: parseFloat(paymentAmount) }
+            });
+            setShowPaymentModal(false);
+            setPaymentAmount('');
+            setSelectedInvoice(null);
+            fetchData();
+        } catch (error) {
+            console.error('Error recording payment:', error);
+            alert('Failed to record payment');
+        } finally {
+            setProcessing(false);
+        }
+    };
+
     const handleApplyLateFees = async () => {
         if (!isFinAdmin) return;
         setProcessing(true);
         try {
-            const res = await axios.post('http://localhost:8000/api/v1/finance/apply-late-fees');
+            const res = await api.post('/finance/apply-late-fees');
             alert(`Applied late fees to ${res.data.affected} invoices.`);
             fetchData();
         } catch (error) {
@@ -95,6 +163,11 @@ export const FinancePage: React.FC = () => {
         } finally {
             setProcessing(false);
         }
+    };
+
+    const getStudentName = (id: number) => {
+        const student = students.find(s => s.id === id);
+        return student ? `${student.full_name} (${student.matricule || 'N/A'})` : `ID: ${id}`;
     };
 
     const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
@@ -177,7 +250,7 @@ export const FinancePage: React.FC = () => {
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
                     </div>
                 ) : (
-                    <div className="bg-white rounded-[40px] shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="bg-white rounded-[40px] shadow-sm border border-slate-200 overflow-hidden min-h-[400px]">
                         {activeTab === 'overview' && (
                             <table className="w-full text-left">
                                 <thead className="bg-white border-b border-slate-100">
@@ -203,6 +276,87 @@ export const FinancePage: React.FC = () => {
                             </table>
                         )}
 
+                        {activeTab === 'tuition' && (
+                            <div className='p-6'>
+                                <div className="flex justify-between items-center mb-6 px-4">
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-800">Tuition Invoices</h3>
+                                        <p className="text-slate-500 text-sm">Manage student billing and payments</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowInvoiceModal(true)}
+                                        className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center hover:bg-emerald-700 transition"
+                                    >
+                                        <Plus className="w-4 h-4 mr-2" /> Create Invoice
+                                    </button>
+                                </div>
+
+                                <table className="w-full text-left">
+                                    <thead className="bg-slate-50 border-b border-slate-100">
+                                        <tr>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Invoice ID</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Student</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Due Date</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Total Due</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Paid</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {invoices.map((inv) => (
+                                            <tr key={inv.id} className="hover:bg-slate-50/50 transition">
+                                                <td className="px-6 py-4 font-mono text-xs text-slate-400">#INV-{inv.id}</td>
+                                                <td className="px-6 py-4 font-bold text-slate-900">{getStudentName(inv.student_id)}</td>
+                                                <td className="px-6 py-4 text-slate-600">{new Date(inv.due_date).toLocaleDateString()}</td>
+                                                <td className="px-6 py-4 font-black text-slate-800">${(inv.amount_due + (inv.late_fee_accumulated || 0)).toLocaleString()}</td>
+                                                <td className="px-6 py-4 text-emerald-600 font-bold">${inv.amount_paid.toLocaleString()}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${inv.status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
+                                                            inv.status === 'partial' ? 'bg-amber-100 text-amber-700' :
+                                                                'bg-red-100 text-red-700'
+                                                        }`}>
+                                                        {inv.status.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    {inv.status !== 'paid' && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedInvoice(inv);
+                                                                setPaymentAmount(String((inv.amount_due + (inv.late_fee_accumulated || 0) - inv.amount_paid)));
+                                                                setShowPaymentModal(true);
+                                                            }}
+                                                            className="text-emerald-600 hover:text-emerald-800 font-bold text-sm bg-emerald-50 px-3 py-1 rounded-lg"
+                                                        >
+                                                            Record Payment
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {invoices.length === 0 && (
+                                            <tr>
+                                                <td colSpan={7} className="px-6 py-12 text-center text-slate-400 font-medium italic">
+                                                    No invoices found. Create one to get started.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {activeTab === 'expenses' && (
+                            <div className="p-8 text-center text-slate-400 font-bold">
+                                <Receipt className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                <p>Auditing queue active. {expenses.filter(e => e.status === 'pending').length} items awaiting review.</p>
+                                <button className="mt-4 bg-slate-900 text-white px-8 py-3 rounded-2xl text-sm font-black shadow-xl shadow-slate-200">
+                                    + Submit Reimbursement
+                                </button>
+                            </div>
+                        )}
+
                         {activeTab === 'vendors' && (
                             <div className="p-8">
                                 <div className="flex justify-between items-center mb-6">
@@ -224,33 +378,99 @@ export const FinancePage: React.FC = () => {
                                             </div>
                                         </div>
                                     ))}
-                                    {vendors.length === 0 && (
-                                        <p className="col-span-2 text-center text-slate-400 py-12 font-bold italic">No vendors registered yet.</p>
-                                    )}
                                 </div>
                             </div>
                         )}
+                    </div>
+                )}
 
-                        {activeTab === 'tuition' && (
-                            <div className="p-8 text-center text-slate-400 font-bold">
-                                <GraduationCap className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                                <p>Tuition data synced. {invoices.length} active records detected.</p>
-                                <div className="mt-4 flex justify-center space-x-3">
-                                    <button className="bg-emerald-600 text-white px-6 py-2 rounded-xl shadow-lg shadow-emerald-100">Quick Bill All</button>
-                                    <button className="bg-white border-2 border-slate-100 text-slate-700 px-6 py-2 rounded-xl shadow-sm hover:border-emerald-200">View Installment Plans</button>
-                                </div>
+                {/* Create Invoice Modal */}
+                {showInvoiceModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-black text-slate-800">New Tuition Invoice</h3>
+                                <button onClick={() => setShowInvoiceModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
                             </div>
-                        )}
-
-                        {activeTab === 'expenses' && (
-                            <div className="p-8 text-center text-slate-400 font-bold">
-                                <Receipt className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                                <p>Auditing queue active. {expenses.filter(e => e.status === 'pending').length} items awaiting review.</p>
-                                <button className="mt-4 bg-slate-900 text-white px-8 py-3 rounded-2xl text-sm font-black shadow-xl shadow-slate-200">
-                                    + Submit Reimbursement
+                            <form onSubmit={handleCreateInvoice} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Student</label>
+                                    <select
+                                        className="w-full p-2 border border-slate-200 rounded-lg"
+                                        value={invoiceForm.student_id}
+                                        onChange={e => setInvoiceForm({ ...invoiceForm, student_id: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">Select Student...</option>
+                                        {students.map(s => (
+                                            <option key={s.id} value={s.id}>{s.full_name} ({s.matricule || 'No ID'})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Amount Due ($)</label>
+                                    <input
+                                        type="number"
+                                        className="w-full p-2 border border-slate-200 rounded-lg"
+                                        value={invoiceForm.amount_due}
+                                        onChange={e => setInvoiceForm({ ...invoiceForm, amount_due: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Due Date</label>
+                                    <input
+                                        type="date"
+                                        className="w-full p-2 border border-slate-200 rounded-lg"
+                                        value={invoiceForm.due_date}
+                                        onChange={e => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition"
+                                >
+                                    {processing ? 'Creating...' : 'Issue Invoice'}
                                 </button>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Payment Modal */}
+                {showPaymentModal && selectedInvoice && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-black text-slate-800">Record Payment</h3>
+                                <button onClick={() => setShowPaymentModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
                             </div>
-                        )}
+                            <div className="mb-4 bg-slate-50 p-4 rounded-xl">
+                                <p className="text-sm text-slate-500">Invoice #{selectedInvoice.id} for <span className="font-bold">{getStudentName(selectedInvoice.student_id)}</span></p>
+                                <p className="text-sm text-slate-500">Total Outstanding: <span className="font-black text-slate-900">${(selectedInvoice.amount_due + (selectedInvoice.late_fee_accumulated || 0) - selectedInvoice.amount_paid).toLocaleString()}</span></p>
+                            </div>
+                            <form onSubmit={handleRecordPayment} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Payment Amount ($)</label>
+                                    <input
+                                        type="number"
+                                        className="w-full p-2 border border-slate-200 rounded-lg"
+                                        value={paymentAmount}
+                                        onChange={e => setPaymentAmount(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition"
+                                >
+                                    {processing ? 'Processing...' : 'Confirm Payment'}
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 )}
             </div>

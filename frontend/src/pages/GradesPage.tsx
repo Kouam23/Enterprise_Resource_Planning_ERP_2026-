@@ -19,9 +19,9 @@ interface Grade {
     id: number;
     student_id: number;
     course_id: number;
-    assessment_type: string;
+    assessment_type: 'CA' | 'Final';
     score: number;
-    weight: number;
+    is_resit: boolean;
     term: string;
 }
 
@@ -38,10 +38,10 @@ export const GradesPage: React.FC = () => {
     // Form state
     const [studentId, setStudentId] = useState<number | ''>('');
     const [courseId, setCourseId] = useState<number | ''>('');
-    const [assessmentType, setAssessmentType] = useState('assignment');
+    const [assessmentType, setAssessmentType] = useState('CA');
     const [score, setScore] = useState(0);
-    const [weight, setWeight] = useState(0.1);
-    const [term, setTerm] = useState('Spring 2026');
+    const [isResit, setIsResit] = useState(false);
+    const [term, setTerm] = useState('Fall 2026');
     const [showAddForm, setShowAddForm] = useState(false);
 
     useEffect(() => {
@@ -75,10 +75,11 @@ export const GradesPage: React.FC = () => {
                 course_id: Number(courseId),
                 assessment_type: assessmentType,
                 score: Number(score),
-                weight: Number(weight),
+                is_resit: isResit,
                 term
             });
             setScore(0);
+            setIsResit(false);
             setShowAddForm(false);
             fetchData();
         } catch (error) {
@@ -87,179 +88,165 @@ export const GradesPage: React.FC = () => {
     };
 
     const getStudentName = (id: number) => students.find(s => s.id === id)?.full_name || 'Unknown';
+    const getStudentMatricule = (id: number) => (students.find(s => s.id === id) as any)?.matricule || 'Pending';
     const getCourseCode = (id: number) => courses.find(c => c.id === id)?.code || 'Unknown';
+
+    // Grouping logic for 30/70 display
+    const groupedGrades = grades.reduce((acc: any, grade) => {
+        const key = `${grade.student_id}-${grade.course_id}`;
+        if (!acc[key]) {
+            acc[key] = { student_id: grade.student_id, course_id: grade.course_id, ca: [], final: null, resit: null };
+        }
+        if (grade.assessment_type === 'CA') acc[key].ca.push(grade);
+        else if (grade.assessment_type === 'Final') {
+            if (grade.is_resit) acc[key].resit = grade;
+            else acc[key].final = grade;
+        }
+        return acc;
+    }, {});
 
     return (
         <DashboardLayout>
             <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-500">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
                     <div>
-                        <div className="flex items-center text-purple-600 font-black text-xs uppercase tracking-widest mb-2">
+                        <div className="flex items-center text-indigo-600 font-bold text-xs uppercase tracking-widest mb-2">
                             <GraduationCap className="w-4 h-4 mr-2" />
-                            Academic Excellence
+                            ICT University • Academic Governance
                         </div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Grade Management</h1>
-                        <p className="text-slate-500 font-medium">
-                            {isFaculty ? 'Record and monitor student performance across all courses.' : 'Monitor your personal academic performance and course progress.'}
-                        </p>
+                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Academic Transcript & Grades</h1>
+                        <p className="text-slate-500 font-medium">Monitoring 30/70 Split (CA vs Final) and GPA 4.0 status.</p>
                     </div>
 
                     {isFaculty && (
                         <button
                             onClick={() => setShowAddForm(!showAddForm)}
                             className={`flex items-center px-6 py-3 rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 ${showAddForm
-                                    ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                    : 'bg-purple-600 text-white hover:bg-purple-700 shadow-purple-200'
+                                ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
                                 }`}
                         >
                             {showAddForm ? (
-                                <><X className="w-5 h-5 mr-2" /> Cancel</>
+                                <><X className="w-5 h-5 mr-2" /> Close</>
                             ) : (
-                                <><Plus className="w-5 h-5 mr-2" /> Record New Score</>
+                                <><Plus className="w-5 h-5 mr-2" /> Enter Assessment</>
                             )}
                         </button>
                     )}
                 </div>
 
                 {showAddForm && isFaculty && (
-                    <div className="bg-white p-8 rounded-[32px] shadow-xl mb-12 border border-slate-100 animate-in slide-in-from-top-4">
-                        <div className="flex items-center mb-8">
-                            <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl mr-4">
-                                <ClipboardCheck className="w-6 h-6" />
-                            </div>
-                            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Record Assessment Score</h2>
-                        </div>
-
+                    <div className="bg-white p-8 rounded-[32px] shadow-2xl mb-12 border border-slate-100 animate-in slide-in-from-top-4">
+                        <h2 className="text-2xl font-black text-slate-800 tracking-tight mb-8">New Score Entry</h2>
                         <form onSubmit={handleAddGrade} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Student</label>
                                 <select
                                     value={studentId} onChange={(e) => setStudentId(Number(e.target.value))}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none transition-all font-bold text-slate-700" required
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700" required
                                 >
                                     <option value="">Select Student</option>
-                                    {students.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                                    {students.map(s => <option key={s.id} value={s.id}>{s.full_name} ({(s as any).matricule})</option>)}
                                 </select>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Course</label>
                                 <select
                                     value={courseId} onChange={(e) => setCourseId(Number(e.target.value))}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none transition-all font-bold text-slate-700" required
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700" required
                                 >
                                     <option value="">Select Course</option>
-                                    {courses.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
+                                    {courses.map(c => <option key={c.id} value={c.id}>{c.code} - {c.title}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Assessment Type</label>
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Assessment Role</label>
                                 <select
                                     value={assessmentType} onChange={(e) => setAssessmentType(e.target.value)}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none transition-all font-bold text-slate-700"
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700"
                                 >
-                                    <option value="assignment">Assignment</option>
-                                    <option value="quiz">Quiz</option>
-                                    <option value="midterm">Midterm</option>
-                                    <option value="final">Final Exam</option>
+                                    <option value="CA">Continuous Assessment (CA)</option>
+                                    <option value="Final">Final Examination</option>
                                 </select>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Score (0-100)</label>
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Score (out of 100)</label>
                                 <input
-                                    type="number" step="0.1" value={score} onChange={(e) => setScore(Number(e.target.value))}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none transition-all font-bold text-slate-700" required
+                                    type="number" step="0.5" value={score} onChange={(e) => setScore(Number(e.target.value))}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700" required
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Weight (e.g. 0.2)</label>
-                                <input
-                                    type="number" step="0.01" value={weight} onChange={(e) => setWeight(Number(e.target.value))}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none transition-all font-bold text-slate-700" required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Term/Semester</label>
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Term</label>
                                 <input
                                     type="text" value={term} onChange={(e) => setTerm(e.target.value)}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none transition-all font-bold text-slate-700" required
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700"
                                 />
                             </div>
-                            <div className="lg:col-span-3 pt-4">
-                                <button type="submit" className="w-full bg-purple-600 text-white py-4 rounded-2xl font-black hover:bg-purple-700 transition-all shadow-lg shadow-purple-200 active:scale-[0.98]">
-                                    Confirm Score Entry
-                                </button>
+                            <div className="flex items-center space-x-3 pt-8">
+                                <input
+                                    type="checkbox" id="isResit" checked={isResit} onChange={(e) => setIsResit(e.target.checked)}
+                                    className="w-5 h-5 text-indigo-600 rounded-lg border-slate-200 focus:ring-indigo-500"
+                                />
+                                <label htmlFor="isResit" className="text-sm font-bold text-slate-600">This is a Resit Attempt</label>
                             </div>
+                            <button type="submit" className="lg:col-span-3 w-full bg-indigo-600 text-white py-4 rounded-3xl font-black shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-all">
+                                Validate & Record Score
+                            </button>
                         </form>
                     </div>
                 )}
 
-                {loading ? (
-                    <div className="flex items-center justify-center p-24 bg-white rounded-[40px] border border-slate-100">
-                        <div className="w-12 h-12 border-4 border-slate-100 border-t-purple-600 rounded-full animate-spin"></div>
-                    </div>
-                ) : (
-                    <div className="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead>
-                                    <tr className="bg-slate-50/50 border-b border-slate-100">
-                                        <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Student</th>
-                                        <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Course</th>
-                                        <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Type</th>
-                                        <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Score</th>
-                                        <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Weight</th>
-                                        {isFaculty && <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Actions</th>}
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {grades.map((grade) => (
-                                        <tr key={grade.id} className="hover:bg-slate-50/50 transition-colors group">
-                                            <td className="px-8 py-6">
-                                                <p className="font-black text-slate-800">{getStudentName(grade.student_id)}</p>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg text-xs font-black">{getCourseCode(grade.course_id)}</span>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <p className="text-sm font-bold text-slate-500 capitalize">{grade.assessment_type}</p>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center">
-                                                    <span className={`text-lg font-black mr-2 ${grade.score >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                        {grade.score}%
-                                                    </span>
-                                                    <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden hidden sm:block">
-                                                        <div className={`h-full rounded-full ${grade.score >= 50 ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${grade.score}%` }}></div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <p className="text-sm font-bold text-slate-400">{(grade.weight * 100).toFixed(0)}%</p>
-                                            </td>
-                                            {isFaculty && (
-                                                <td className="px-8 py-6">
-                                                    <button className="p-2 text-slate-300 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all">
-                                                        <Edit2 className="w-5 h-5" />
-                                                    </button>
-                                                </td>
+                <div className="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-slate-50/50 border-b border-slate-100">
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Student / Matricule</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Course Code</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">CA (30%)</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Final (70%)</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Weighted Total</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Standing</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-bold">
+                            {Object.values(groupedGrades).map((data: any) => {
+                                const caAvg = data.ca.length ? data.ca.reduce((t: number, g: any) => t + g.score, 0) / data.ca.length : 0;
+                                const finalScore = data.resit ? data.resit.score : (data.final ? data.final.score : 0);
+                                const total = (caAvg * 0.3) + (finalScore * 0.7);
+
+                                return (
+                                    <tr key={`${data.student_id}-${data.course_id}`} className="hover:bg-slate-50/30 transition-colors">
+                                        <td className="px-8 py-6">
+                                            <p className="text-slate-900">{getStudentName(data.student_id)}</p>
+                                            <p className="text-[10px] text-slate-400 uppercase tracking-widest">{getStudentMatricule(data.student_id)}</p>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-black">{getCourseCode(data.course_id)}</span>
+                                        </td>
+                                        <td className="px-8 py-6 text-slate-500">{caAvg.toFixed(1)}%</td>
+                                        <td className="px-8 py-6 text-slate-500">
+                                            {finalScore.toFixed(1)}%
+                                            {data.resit && <span className="ml-2 text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-black uppercase">Resit</span>}
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className={`text-lg font-black ${total >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>{total.toFixed(1)}%</span>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            {total >= 50 ? (
+                                                <span className="text-[10px] bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-xl uppercase tracking-widest font-black">Passed</span>
+                                            ) : total >= 40 ? (
+                                                <span className="text-[10px] bg-amber-50 text-amber-600 px-3 py-1.5 rounded-xl uppercase tracking-widest font-black">Resit Recommended</span>
+                                            ) : (
+                                                <span className="text-[10px] bg-rose-50 text-rose-600 px-3 py-1.5 rounded-xl uppercase tracking-widest font-black">Carry-Over</span>
                                             )}
-                                        </tr>
-                                    ))}
-                                    {grades.length === 0 && (
-                                        <tr>
-                                            <td colSpan={isFaculty ? 6 : 5} className="px-8 py-20 text-center">
-                                                <div className="flex flex-col items-center">
-                                                    <ClipboardCheck className="w-12 h-12 text-slate-200 mb-4" />
-                                                    <p className="text-slate-400 font-bold">No academic records found in this cycle.</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </DashboardLayout>
     );

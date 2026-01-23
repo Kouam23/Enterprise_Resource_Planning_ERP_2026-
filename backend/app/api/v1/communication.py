@@ -18,16 +18,22 @@ router = APIRouter()
 async def read_notices(
     db: AsyncSession = Depends(deps.get_db),
     category: str = None,
-    current_user: Any = Depends(deps.get_current_user)
+    current_user: Any = Depends(deps.get_current_user_optional)
 ) -> Any:
-    # Notice logic: Show global notices (target_role_id is NULL) 
-    # OR notices specifically targeted at the user's role.
-    query = select(Notice).where(
-        or_(
-            Notice.target_role_id == None,
-            Notice.target_role_id == current_user.role_id
-        )
-    )
+    """
+    Get notices.
+    - If user is logged in: Show Public + Role-specific notices.
+    - If guest: Show only Public notices.
+    """
+    # Base condition: Public notices
+    conditions = [Notice.target_role_id == None]
+    
+    # If authenticated, add role-specific notices
+    if current_user:
+        conditions.append(Notice.target_role_id == current_user.role_id)
+        
+    query = select(Notice).where(or_(*conditions))
+    
     if category:
         query = query.where(Notice.category == category)
     result = await db.execute(query.order_by(Notice.created_at.desc()))
@@ -50,11 +56,18 @@ async def create_notice(
 async def read_forum(
     db: AsyncSession = Depends(deps.get_db),
     topic: str = None,
-    current_user: Any = Depends(deps.get_current_user)
+    current_user: Any = Depends(deps.get_current_user_optional)
 ) -> Any:
-    # Forum logic: Every user (role) has their own personalized page
-    # where they can connect and discourse with similar users.
-    query = select(ForumPost).where(ForumPost.target_role_id == current_user.role_id)
+    # Forum logic: Public posts + Role-specific posts
+    
+    # Base: Public posts
+    conditions = [ForumPost.target_role_id == None]
+    
+    if current_user:
+         conditions.append(ForumPost.target_role_id == current_user.role_id)
+         
+    query = select(ForumPost).where(or_(*conditions))
+    
     if topic:
         query = query.where(ForumPost.topic == topic)
     result = await db.execute(query.order_by(ForumPost.created_at.desc()))

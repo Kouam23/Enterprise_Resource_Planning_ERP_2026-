@@ -8,7 +8,10 @@ class StudentBase(BaseModel):
     email: Optional[EmailStr] = None
     enrollment_date: Optional[date] = None
     status: Optional[str] = "active"
+    matricule: Optional[str] = None
     program_id: Optional[int] = None
+    cumulative_gpa: Optional[float] = 0.0
+    total_credits_earned: Optional[int] = 0
 
 # Properties to receive via API on creation
 class StudentCreate(StudentBase):
@@ -27,7 +30,7 @@ class StudentInDBBase(StudentBase):
 
 # Additional properties to return via API
 class Student(StudentInDBBase):
-    cgpa: Optional[float] = 0.0
+    pass
 
 # Additional properties stored in DB
 class StudentInDB(StudentInDBBase):

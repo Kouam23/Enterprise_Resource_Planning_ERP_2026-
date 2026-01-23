@@ -29,6 +29,7 @@ async def create_tuition_invoice(
     *,
     db: AsyncSession = Depends(deps.get_db),
     invoice_in: TuitionInvoiceCreate,
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator", "Staff"]))
 ) -> Any:
     return await crud_tuition_invoice.create(db, obj_in=invoice_in)
 
@@ -38,6 +39,7 @@ async def update_tuition_invoice(
     db: AsyncSession = Depends(deps.get_db),
     id: int,
     invoice_in: TuitionInvoiceUpdate,
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator", "Staff"]))
 ) -> Any:
     db_obj = await crud_tuition_invoice.get(db, id=id)
     if not db_obj:
@@ -60,5 +62,6 @@ async def pay_invoice(
     id: int,
     amount: float,
     db: AsyncSession = Depends(deps.get_db),
+    current_user: Any = Depends(deps.RoleChecker(["Super Admin", "Administrator", "Staff"]))
 ) -> Any:
     return await finance_service.record_payment(db, invoice_id=id, amount=amount)
